@@ -28,8 +28,7 @@ final class ErrorHandlerMiddleware  implements MiddlewareInterface
         try {
             return $handler->handle($request);
         } catch (\Throwable $error) {
-            $this->errorHandler->setRequest($request);
-            $this->errorHandler->handle($error);
+            $this->errorHandler->handle($error, $request);
         }
     }
 

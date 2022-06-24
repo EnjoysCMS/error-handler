@@ -8,8 +8,10 @@ use Doctrine\ORM\NoResultException;
 use EnjoysCMS\Core\Exception\ForbiddenException;
 use EnjoysCMS\Core\Exception\NotFoundException;
 use EnjoysCMS\ErrorHandler\Output\Html;
+use EnjoysCMS\ErrorHandler\Output\Image;
 use EnjoysCMS\ErrorHandler\Output\Json;
 use EnjoysCMS\ErrorHandler\Output\Plain;
+use EnjoysCMS\ErrorHandler\Output\Svg;
 use EnjoysCMS\ErrorHandler\Output\Xml;
 use HttpSoft\Emitter\EmitterInterface;
 use HttpSoft\Emitter\SapiEmitter;
@@ -20,14 +22,25 @@ use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 
 final class ErrorHandler implements ErrorHandlerInterface
 {
+    private const  PROCESSORS_MAP = [
+        Json::class => ['application/json', 'text/json'],
+        Html::class => ['text/html'],
+        Xml::class => ['text/xml'],
+        Plain::class => ['text/plain', 'text/css', 'text/javascript'],
+        Svg::class => ['image/svg+xml'],
+        Image::class => ['image/gif', 'image/jpeg', 'image/png', 'image/webp']
+    ];
+
+    private const DEFAULT_STATUS_CODE = 500;
+
     private array $mappingCode = [];
+    private array $errorsMap = [];
     private array $mappingLoggerType = [];
     private EmitterInterface $emitter;
     private LoggerInterface $logger;
     private ?Error $error = null;
     private ?ServerRequestInterface $request = null;
 
-    private int $httpStatus = 500;
 
     public function __construct(LoggerInterface $logger = null, EmitterInterface $emitter = null)
     {
@@ -35,52 +48,30 @@ final class ErrorHandler implements ErrorHandlerInterface
         $this->emitter = $emitter ?? new SapiEmitter();
     }
 
-    public function handle(\Throwable $error): void
+    public function handle(\Throwable $error, ServerRequestInterface $request): void
     {
-        $this->error = new Error($error);
-        $this->httpStatus = $this->getHttpStatus();
-        $this->sendToLogger();
+        $typeError = get_class($error);
+        $httpStatusCode = $this->getStatusCode($typeError);
 
-        $output = $this->getOutputProcessor();
-        $output->setError($this->error);
+        $output = $this->getOutputProcessor($request);
 
-        $this->emitter->emit($output->getResponse()->withStatus($this->httpStatus));
+
+        $this->emitter->emit(
+            $output
+                ->setError($error)
+                ->getResponse()
+                ->withStatus($httpStatusCode)
+        );
         exit;
     }
 
-    public function setRequest(ServerRequestInterface $request)
+
+    private function getOutputProcessor(ServerRequestInterface $request)
     {
-        $this->request = $request;
-    }
-
-    private function getHttpStatus(): int
-    {
-        foreach ($this->mappingCode as $httpStatus => $stack) {
-            if (in_array($this->type, $stack)) {
-                return $httpStatus;
-            }
-        }
-
-        return $this->httpStatus;
-    }
-
-    private function getOutputProcessor()
-    {
-        if ($this->request === null){
-            throw new \InvalidArgumentException('Set request!');
-        }
-
-        $processorMap = [
-            Json::class => ['application/json'],
-            Html::class => ['text/html'],
-            Xml::class => ['text/xml'],
-            Plain::class => ['text/plain', 'text/css', 'text/javascript'],
-        ];
-
-        foreach ($processorMap as $processor => $types) {
-            foreach ($types as $type) {
-                if (stripos($this->request->getHeaderLine('Content-Type'), $type) !== false) {
-                    return new $processor;
+        foreach (self::PROCESSORS_MAP as $processor => $mimes) {
+            foreach ($mimes as $mime) {
+                if (stripos($request->getHeaderLine('Accept'), $mime) !== false) {
+                    return new $processor($mime);
                 }
             }
         }
@@ -88,42 +79,32 @@ final class ErrorHandler implements ErrorHandlerInterface
         return new Html();
     }
 
-    private function sendToLogger()
+    private function getStatusCode(string $typeError)
     {
-        $loggerTypes = array_keys(
-            array_filter($this->getMappingLoggerType(), function ($stack, $type) {
-                if (in_array($this->error->getType(), $stack)) {
-                    return $type;
-                }
-            }, ARRAY_FILTER_USE_BOTH)
-        );
+        if (in_array($typeError, array_keys($this->getErrorsMap()))) {
+            return $this->getErrorsMap()[$typeError]['statusCode'] ?? self::DEFAULT_STATUS_CODE;
+        }
 
-        foreach ($loggerTypes as $loggerType) {
-            $this->logger->$loggerType($this->error, [
-                'file' => $this->error->getError()->getFile(),
-                'line' => $this->error->getError()->getLine(),
-                'code' => $this->error->getError()->getCode(),
-            ]);
+        return self::DEFAULT_STATUS_CODE;
+    }
+
+
+    public function setErrorsMap(array $errorsMap)
+    {
+        foreach ($errorsMap as $statusCode => $array) {
+            foreach ($array as $key => $value) {
+                if (is_array($value)){
+                    $this->errorsMap[$key]['statusCode'] = $statusCode;
+                    $this->errorsMap[$key]['loggerType'] = $value;
+                    continue;
+                }
+                $this->errorsMap[$value]['statusCode'] = $statusCode;
+            }
         }
     }
 
-    public function setMappingCode(array $mappingCode)
+    public function getErrorsMap(): array
     {
-        $this->mappingCode = $mappingCode;
-    }
-
-    public function getMappingCode(): array
-    {
-        return $this->mappingCode;
-    }
-
-    public function setMappingLoggerType(array $mappingLoggerType)
-    {
-        $this->mappingLoggerType = $mappingLoggerType;
-    }
-
-    public function getMappingLoggerType(): array
-    {
-        return $this->mappingLoggerType;
+        return $this->errorsMap;
     }
 }

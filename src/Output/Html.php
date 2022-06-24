@@ -10,19 +10,28 @@ use EnjoysCMS\ErrorHandler\Error;
 use HttpSoft\Message\Response;
 use Psr\Http\Message\ResponseInterface;
 
-final class Html
+final class Html extends AbstractOutput implements OutputInterface
 {
-    private Error $error;
-
-    public function setError(Error $error)
-    {
-        $this->error = $error;
-    }
 
     public function getResponse(): ResponseInterface
     {
-        $response = new Response(500);
-        $response->getBody()->write($this->error->__toString());
-        return $response;
+        $this->response->getBody()->write(
+            <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{$this->getType()} {$this->getError()->getCode()}</title>
+    <style>html{font-family: sans-serif;}</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+    <h1>{$this->getType()} {$this->getError()->getCode()}</h1>
+    <p>{$this->getError()->getMessage()}</p>
+</body>
+</html>
+HTML
+        );
+        return $this->response;
     }
 }
