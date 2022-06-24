@@ -50,12 +50,11 @@ final class ErrorHandler implements ErrorHandlerInterface
 
     public function handle(\Throwable $error, ServerRequestInterface $request): void
     {
-        $typeError = get_class($error);
-        $httpStatusCode = $this->getStatusCode($typeError);
+        $httpStatusCode = $this->getStatusCode($error);
+        $this->sendToLogger($error);
+
 
         $output = $this->getOutputProcessor($request);
-
-
         $this->emitter->emit(
             $output
                 ->setError($error)
@@ -79,8 +78,9 @@ final class ErrorHandler implements ErrorHandlerInterface
         return new Html();
     }
 
-    private function getStatusCode(string $typeError)
+    private function getStatusCode(\Throwable $error)
     {
+        $typeError = get_class($error);
         if (in_array($typeError, array_keys($this->getErrorsMap()))) {
             return $this->getErrorsMap()[$typeError]['statusCode'] ?? self::DEFAULT_STATUS_CODE;
         }
@@ -88,12 +88,30 @@ final class ErrorHandler implements ErrorHandlerInterface
         return self::DEFAULT_STATUS_CODE;
     }
 
+    private function sendToLogger(\Throwable $error)
+    {
+        $loggerTypes = [];
+        $typeError = get_class($error);
+        if (in_array($typeError, array_keys($this->getErrorsMap()))) {
+            $loggerTypes = $this->getErrorsMap()[$typeError]['loggerType'] ?? [];
+        }
+
+        foreach ($loggerTypes as $loggerType) {
+            if (method_exists($this->logger, $loggerType)) {
+                $this->logger->$loggerType(sprintf("%s %s\n%s", $typeError, $error->getCode(), $error->getMessage()), [
+                    'code' => $error->getCode(),
+                    'line' => $error->getLine(),
+                    'file' => $error->getFile(),
+                ]);
+            }
+        }
+    }
 
     public function setErrorsMap(array $errorsMap)
     {
         foreach ($errorsMap as $statusCode => $array) {
             foreach ($array as $key => $value) {
-                if (is_array($value)){
+                if (is_array($value)) {
                     $this->errorsMap[$key]['statusCode'] = $statusCode;
                     $this->errorsMap[$key]['loggerType'] = $value;
                     continue;
