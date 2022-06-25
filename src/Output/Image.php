@@ -43,7 +43,7 @@ final class Image extends AbstractOutput implements OutputInterface
     private function createImage()
     {
         $type = $this->getType();
-        $code = $this->getError()->getCode();
+        $code = empty($this->getError()->getCode()) ? "" : "[{$this->getError()->getCode()}]";
         $message = $this->getError()->getMessage();
 
         $size = 200;
