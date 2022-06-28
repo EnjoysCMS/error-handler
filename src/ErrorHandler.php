@@ -51,7 +51,6 @@ final class ErrorHandler implements ErrorHandlerInterface
     private array $mappingLoggerType = [];
     private EmitterInterface $emitter;
     private LoggerInterface $logger;
-    private ?Error $error = null;
 
 
     public function __construct(
@@ -72,14 +71,20 @@ final class ErrorHandler implements ErrorHandlerInterface
         $this->sendToLogger($error);
 
         $output = $this->getOutputProcessor();
-        $this->emitter->emit(
-            $output
-                ->setError($error)
-                ->setHttpStatusCode($httpStatusCode)
-                ->getResponse()
-                ->withStatus($httpStatusCode)
-        );
 
+        try {
+            $this->emitter->emit(
+                $output
+                    ->setError($error)
+                    ->setHttpStatusCode($httpStatusCode)
+                    ->getResponse()
+                    ->withStatus($httpStatusCode)
+            );
+        } catch (\Throwable $e) {
+            // clear templater to defaults setting
+            Html::setHtmlTemplater(null);
+            throw $e;
+        }
         exit;
     }
 
@@ -169,27 +174,29 @@ final class ErrorHandler implements ErrorHandlerInterface
         });
 
         // Handles PHP execution errors such as warnings and notices.
-        set_error_handler(static function (int $severity, string $message, string $file, int $line) use ($logger): bool {
-            if (!(error_reporting() & $severity)) {
-                // This error code is not included in error_reporting.
+        set_error_handler(
+            static function (int $severity, string $message, string $file, int $line) use ($logger): bool {
+                if (!(error_reporting() & $severity)) {
+                    // This error code is not included in error_reporting.
+                    return true;
+                }
+
+                $error = new \ErrorException(
+                    sprintf('%s: %s', self::ERROR_NAMES[$severity] ?? '', $message),
+                    0,
+                    $severity,
+                    $file,
+                    $line
+                );
+
+                if (self::isFatalError($severity)) {
+                    throw $error;
+                }
+
+                $logger->debug($error->getMessage(), $error->getTrace());
                 return true;
             }
-
-            $error = new \ErrorException(
-                sprintf('%s: %s', self::ERROR_NAMES[$severity] ?? '', $message),
-                0,
-                $severity,
-                $file,
-                $line
-            );
-
-            if (self::isFatalError($severity)) {
-                throw $error;
-            }
-
-            $logger->debug($error->getMessage(), $error->getTrace());
-            return true;
-        });
+        );
 
         // Handles fatal error.
         register_shutdown_function(function (): void {
@@ -203,7 +210,6 @@ final class ErrorHandler implements ErrorHandlerInterface
                     $e['file'],
                     $e['line']
                 );
-                dd($error);
                 $this->handle($error);
             }
         });

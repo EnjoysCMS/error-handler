@@ -13,13 +13,9 @@ use Psr\Http\Message\ResponseInterface;
 
 final class Html extends AbstractOutput implements OutputInterface
 {
-    /**
-     * @var class-string ViewInterface
-     */
-    static private ?string $viewClassName = null;
 
     /**
-     * @var OutputInterface
+     * @var ViewInterface
      */
     static private $templater;
 
