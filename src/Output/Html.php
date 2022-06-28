@@ -34,7 +34,7 @@ final class Html extends AbstractOutput implements OutputInterface
 
     public function getResponse(): ResponseInterface
     {
-        $this->response->getBody()->write(self::$templater->getBody($this->error, $this->httpStatusCode));
+        $this->response->getBody()->write(self::$templater->getContent($this->error, $this->httpStatusCode));
         return $this->response;
     }
 

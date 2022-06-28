@@ -9,7 +9,7 @@ use GuzzleHttp\Psr7\Response;
 
 final class SimpleHtmlViewVeryVerbose implements ViewInterface
 {
-    public function getBody(\Throwable $error, int $statusCode = ErrorHandler::DEFAULT_STATUS_CODE): string
+    public function getContent(\Throwable $error, int $statusCode = ErrorHandler::DEFAULT_STATUS_CODE): string
     {
         $phrase = $this->getPhrase($statusCode);
         $type = get_class($error);
