@@ -124,7 +124,7 @@ final class ErrorHandler implements ErrorHandlerInterface
         }
     }
 
-    public function setErrorsMap(array $errorsMap)
+    public function setErrorsMap(array $errorsMap): ErrorHandler
     {
         foreach ($errorsMap as $statusCode => $array) {
             foreach ($array as $key => $value) {
@@ -136,6 +136,8 @@ final class ErrorHandler implements ErrorHandlerInterface
                 $this->errorsMap[$value]['statusCode'] = $statusCode;
             }
         }
+
+        return $this;
     }
 
     public function getErrorsMap(): array
@@ -145,12 +147,12 @@ final class ErrorHandler implements ErrorHandlerInterface
 
     /**
      * Catch Errors, Warning, etc
-     * @return void
      * @throws \ErrorException
      */
-    public function catchErrors()
+    public function catchErrors(): ErrorHandler
     {
         $this->register();
+        return $this;
     }
 
     /**
