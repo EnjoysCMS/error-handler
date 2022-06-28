@@ -22,5 +22,27 @@ $errorHandler->setErrorsMap([
     ]
 ]);
 
+// Установка другого шаблона для вывода ошибок в HTML
+\EnjoysCMS\ErrorHandler\Output\Html::setHtmlTemplater(
+    // Реализация \EnjoysCMS\ErrorHandler\View\ViewInterface
+    // уже внутри реализации можно настроить разные шаблоны под 
+    // разные ошибки, например для 404 и 403
+    new \EnjoysCMS\ErrorHandler\View\SimpleHtmlViewVerbose()
+);
+
+
+try {
+    // ... something code
+} catch(\Throwable $error) {
+    $errorHandler->handle($error, Psr\Http\Message\ServerRequestInterface $request);
+}
+
+
+```
+
+### ErrorHandlerMiddleware
+```php 
+$errorHandler = new errorHandler();
+// ... more setting error handler
 $errorHandlerMiddleware = new ErrorHandlerMiddleware($errorHandler);
 ```
