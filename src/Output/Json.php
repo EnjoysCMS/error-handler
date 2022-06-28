@@ -16,6 +16,7 @@ final class Json extends AbstractOutput implements OutputInterface
 
     public function getResponse(): ResponseInterface
     {
+        $type = get_class($this->error);
         $response = $this->response
             ->withHeader('Content-Type', 'application/json')
         ;
@@ -23,9 +24,9 @@ final class Json extends AbstractOutput implements OutputInterface
             json_encode(
                 [
                     'error' => [
-                        'type' => $this->getType(),
-                        'code' => $this->getError()->getCode(),
-                        'message' => $this->getError()->getMessage()
+                        'type' => $type,
+                        'code' => $this->error->getCode(),
+                        'message' => $this->error->getMessage()
                     ]
                 ]
             )

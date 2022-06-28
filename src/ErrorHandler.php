@@ -31,7 +31,7 @@ final class ErrorHandler implements ErrorHandlerInterface
         Image::class => ['image/gif', 'image/jpeg', 'image/png', 'image/webp']
     ];
 
-    private const DEFAULT_STATUS_CODE = 500;
+    public const DEFAULT_STATUS_CODE = 500;
 
     private array $mappingCode = [];
     private array $errorsMap = [];
@@ -58,6 +58,7 @@ final class ErrorHandler implements ErrorHandlerInterface
         $this->emitter->emit(
             $output
                 ->setError($error)
+                ->setHttpStatusCode($httpStatusCode)
                 ->getResponse()
                 ->withStatus($httpStatusCode)
         );

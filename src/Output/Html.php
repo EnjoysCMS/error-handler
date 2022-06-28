@@ -7,31 +7,41 @@ namespace EnjoysCMS\ErrorHandler\Output;
 
 
 use EnjoysCMS\ErrorHandler\Error;
+use EnjoysCMS\ErrorHandler\View\SimpleHtmlView;
+use EnjoysCMS\ErrorHandler\View\ViewInterface;
 use Psr\Http\Message\ResponseInterface;
 
 final class Html extends AbstractOutput implements OutputInterface
 {
+    /**
+     * @var class-string ViewInterface
+     */
+    static private ?string $viewClassName = null;
+
+    /**
+     * @var OutputInterface
+     */
+    static private $templater;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        if (self::$templater === null) {
+            self::$templater = new SimpleHtmlView();
+        }
+    }
 
     public function getResponse(): ResponseInterface
     {
-        $code = empty($this->getError()->getCode()) ? "" : "[{$this->getError()->getCode()}]";
-        $this->response->getBody()->write(
-            <<<HTML
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>{$this->getType()} {$this->getError()->getCode()}</title>
-    <style>html{font-family: sans-serif;}</style>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-</head>
-<body>
-    <h1>$code {$this->getType()}</h1>
-    <p>{$this->getError()->getMessage()}</p>
-</body>
-</html>
-HTML
-        );
+        $this->response->getBody()->write(self::$templater->getBody($this->error, $this->httpStatusCode));
         return $this->response;
     }
+
+    static public function setHtmlTemplater(ViewInterface $temlater = null)
+    {
+        self::$templater = $temlater;
+    }
+
+
 }

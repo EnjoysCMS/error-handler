@@ -7,20 +7,26 @@ namespace EnjoysCMS\ErrorHandler\Output;
 
 
 use EnjoysCMS\ErrorHandler\Error;
+use EnjoysCMS\ErrorHandler\ErrorHandler;
 use HttpSoft\Message\Response;
 use Psr\Http\Message\ResponseInterface;
 
 abstract class AbstractOutput
 {
-    private \Throwable $error;
-    private string $type;
+    protected \Throwable $error;
     protected ResponseInterface $response;
+    protected int $httpStatusCode = ErrorHandler::DEFAULT_STATUS_CODE;
 
-    public function __construct(protected string $mimeType)
+    public function __construct(protected ?string $mimeType = null)
     {
         $this->response = new Response();
     }
 
+    public function setHttpStatusCode(int $statusCode)
+    {
+        $this->httpStatusCode = $statusCode;
+        return $this;
+    }
 
     public function setError(\Throwable $error)
     {
@@ -29,13 +35,4 @@ abstract class AbstractOutput
         return $this;
     }
 
-    public function getError(): \Throwable
-    {
-        return $this->error;
-    }
-
-    public function getType(): string
-    {
-        return $this->type;
-    }
 }

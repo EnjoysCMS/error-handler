@@ -14,13 +14,14 @@ final class Xml extends AbstractOutput implements OutputInterface
     public function getResponse(): ResponseInterface
     {
 
+        $type = get_class($this->error);
         $this->response->getBody()->write(
             <<<XML
 <?xml version="1.0" encoding="utf-8"?>
 <error>
-    <type>{$this->getType()}</type>
-    <code>{$this->getError()->getCode()}</code>
-    <message>{$this->getError()->getMessage()}</message>
+    <type>$type</type>
+    <code>{$this->error->getCode()}</code>
+    <message>{$this->error->getMessage()}</message>
 </error>
 XML
         );
