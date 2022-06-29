@@ -51,6 +51,7 @@ final class ErrorHandler implements ErrorHandlerInterface
     private array $mappingLoggerType = [];
     private EmitterInterface $emitter;
     private LoggerInterface $logger;
+    private bool $allowQuit = true;
 
 
     public function __construct(
@@ -62,17 +63,20 @@ final class ErrorHandler implements ErrorHandlerInterface
         $this->emitter = $emitter ?? new SapiEmitter();
     }
 
+    /**
+     * @throws \Throwable
+     */
     public function handle(\Throwable $error): void
     {
         // disable error capturing to avoid recursive errors while handling exceptions
         $this->unregister();
 
-        $httpStatusCode = $this->getStatusCode($error);
-        $this->sendToLogger($error);
-
-        $output = $this->getOutputProcessor();
-
         try {
+            $httpStatusCode = $this->getStatusCode($error);
+            $this->sendToLogger($error);
+
+            $output = $this->getOutputProcessor();
+
             $this->emitter->emit(
                 $output
                     ->setError($error)
@@ -81,11 +85,13 @@ final class ErrorHandler implements ErrorHandlerInterface
                     ->withStatus($httpStatusCode)
             );
         } catch (\Throwable $e) {
-            // clear templater to defaults setting
-            Html::setHtmlTemplater(null);
+            Html::setHtmlTemplater(); // clear templater to defaults setting
             throw $e;
         }
-        exit;
+
+        if ($this->allowQuit) {
+            exit;
+        }
     }
 
     private function getOutputProcessor()
@@ -156,16 +162,23 @@ final class ErrorHandler implements ErrorHandlerInterface
      */
     public function catchErrors(): ErrorHandler
     {
+        $this->displayErrors();
         $this->register();
+        return $this;
+    }
+
+    public function displayErrors(bool $value = false): ErrorHandler
+    {
+        ini_set('display_errors', $value ? '1' : '0');
         return $this;
     }
 
     /**
      * Register this error handler.
+     * @throws \Throwable
      */
     public function register(): void
     {
-        ini_set('display_errors', '0');
 
         $logger = $this->logger;
         // Handles throwable, echo output and exit.
@@ -225,7 +238,7 @@ final class ErrorHandler implements ErrorHandlerInterface
     }
 
 
-    public static function isFatalError($severity)
+    public static function isFatalError($severity): bool
     {
         return $severity > 0 && in_array($severity, [
                 E_ERROR,
@@ -236,5 +249,11 @@ final class ErrorHandler implements ErrorHandlerInterface
                 E_COMPILE_WARNING,
                 E_USER_ERROR,
             ], true);
+    }
+
+    public function allowQuit(bool $value = true): ErrorHandler
+    {
+        $this->allowQuit = $value;
+        return $this;
     }
 }
