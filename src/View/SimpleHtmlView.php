@@ -18,7 +18,7 @@ final class SimpleHtmlView implements ViewInterface
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Error</title>
+    <title>Error $statusCode. $phrase</title>
     <style>
         body {
 

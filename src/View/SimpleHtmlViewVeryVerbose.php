@@ -14,13 +14,13 @@ final class SimpleHtmlViewVeryVerbose implements ViewInterface
         $phrase = $this->getPhrase($statusCode);
         $type = get_class($error);
 
-        $message = $error->__toString();
+        $message = htmlspecialchars($error->__toString());
 
         return <<<HTML
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Error</title>
+    <title>Error $statusCode. $phrase</title>
     <style>
         body {
 

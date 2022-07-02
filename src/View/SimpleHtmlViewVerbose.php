@@ -20,7 +20,7 @@ final class SimpleHtmlViewVerbose implements ViewInterface
                 [
                     $type,
                     empty($error->getCode()) ? null : $error->getCode(),
-                    empty($error->getMessage()) ? null : $error->getMessage(),
+                    empty($error->getMessage()) ? null : htmlspecialchars($error->getMessage()),
                 ],
                 function ($item) {
                     return !is_null($item);
@@ -32,7 +32,7 @@ final class SimpleHtmlViewVerbose implements ViewInterface
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Error</title>
+    <title>Error $statusCode. $phrase</title>
     <style>
         body {
 
