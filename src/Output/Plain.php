@@ -15,7 +15,7 @@ final class Plain extends AbstractOutput implements OutputInterface
 
     public function getResponse(): ResponseInterface
     {
-        $code = empty($this->getError()->getCode()) ? "" : "[{$this->getError()->getCode()}]";
+        $code = empty($this->error->getCode()) ? "" : "[{$this->error->getCode()}]";
         $type = get_class($this->error);
 
         $this->response->getBody()->write(
