@@ -47,8 +47,13 @@ final class ErrorHandler implements ErrorHandlerInterface
 
     public const DEFAULT_STATUS_CODE = 500;
 
-    private array $mappingCode = [];
+    /**
+     * @var array<int, string[]|array<string, string[]>>
+     */
     private array $errorsMap = [];
+    /**
+     * @var array<int, string[]>
+     */
     private array $mappingLoggerType = [];
     private LoggerInterface $logger;
     private bool $allowQuit = false;
@@ -72,7 +77,7 @@ final class ErrorHandler implements ErrorHandlerInterface
 
         try {
             $httpStatusCode = $this->getStatusCode($error);
-            $this->sendToLogger($error);
+            $this->sendToLogger($error, $this->mappingLoggerType[$httpStatusCode] ?? []);
 
             $output = $this->getOutputProcessor();
 
@@ -116,12 +121,14 @@ final class ErrorHandler implements ErrorHandlerInterface
         return self::DEFAULT_STATUS_CODE;
     }
 
-    private function sendToLogger(\Throwable $error): void
+    private function sendToLogger(\Throwable $error, array $loggerTypes = []): void
     {
-        $loggerTypes = [];
         $typeError = get_class($error);
-        if (in_array($typeError, array_keys($this->getErrorsMap()))) {
-            $loggerTypes = $this->getErrorsMap()[$typeError]['loggerType'] ?? [];
+
+        if (in_array($typeError, array_keys($this->getErrorsMap()))
+            && array_key_exists('loggerType', $this->getErrorsMap()[$typeError])
+        ) {
+            $loggerTypes = $this->getErrorsMap()[$typeError]['loggerType'];
         }
 
         foreach ($loggerTypes as $loggerType) {
@@ -249,6 +256,12 @@ final class ErrorHandler implements ErrorHandlerInterface
     public function allowQuit(bool $value = true): ErrorHandler
     {
         $this->allowQuit = $value;
+        return $this;
+    }
+
+    public function setMappingLoggerType(array $mappingLoggerType): ErrorHandler
+    {
+        $this->mappingLoggerType = $mappingLoggerType;
         return $this;
     }
 }

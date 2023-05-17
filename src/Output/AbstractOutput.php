@@ -11,7 +11,7 @@ use EnjoysCMS\ErrorHandler\ErrorHandler;
 use HttpSoft\Message\Response;
 use Psr\Http\Message\ResponseInterface;
 
-abstract class AbstractOutput
+abstract class AbstractOutput implements OutputInterface
 {
     protected \Throwable $error;
     protected ResponseInterface $response;
@@ -22,13 +22,13 @@ abstract class AbstractOutput
         $this->response = new Response();
     }
 
-    public function setHttpStatusCode(int $statusCode)
+    public function setHttpStatusCode(int $status): static
     {
-        $this->httpStatusCode = $statusCode;
+        $this->httpStatusCode = $status;
         return $this;
     }
 
-    public function setError(\Throwable $error)
+    public function setError(\Throwable $error): static
     {
         $this->error = $error;
         $this->type = get_class($error);
