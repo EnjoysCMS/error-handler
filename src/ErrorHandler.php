@@ -48,11 +48,12 @@ final class ErrorHandler implements ErrorHandlerInterface
     public const DEFAULT_STATUS_CODE = 500;
 
     /**
-     * @var array<int, string[]|array<string, string[]>>
+     * @var array<string, array{loggerType: list<string>, statusCode: int}>
      */
     private array $errorsMap = [];
+
     /**
-     * @var array<int, string[]>
+     * @var array<int, list<string>>
      */
     private array $mappingLoggerType = [];
     private LoggerInterface $logger;
@@ -111,24 +112,27 @@ final class ErrorHandler implements ErrorHandlerInterface
         return new Html();
     }
 
-    private function getStatusCode(\Throwable $error)
+    private function getStatusCode(\Throwable $error): int
     {
         $typeError = get_class($error);
-        if (in_array($typeError, array_keys($this->getErrorsMap()))) {
-            return $this->getErrorsMap()[$typeError]['statusCode'] ?? self::DEFAULT_STATUS_CODE;
+        if (in_array($typeError, array_keys($this->errorsMap))) {
+            return $this->errorsMap[$typeError]['statusCode'] ?? self::DEFAULT_STATUS_CODE;
         }
 
         return self::DEFAULT_STATUS_CODE;
     }
 
+    /**
+     * @param list<string> $loggerTypes
+     */
     private function sendToLogger(\Throwable $error, array $loggerTypes = []): void
     {
         $typeError = get_class($error);
 
-        if (in_array($typeError, array_keys($this->getErrorsMap()))
-            && array_key_exists('loggerType', $this->getErrorsMap()[$typeError])
+        if (in_array($typeError, array_keys($this->errorsMap))
+            && array_key_exists('loggerType', $this->errorsMap[$typeError])
         ) {
-            $loggerTypes = $this->getErrorsMap()[$typeError]['loggerType'];
+            $loggerTypes = $this->errorsMap[$typeError]['loggerType'];
         }
 
         foreach ($loggerTypes as $loggerType) {
@@ -142,26 +146,25 @@ final class ErrorHandler implements ErrorHandlerInterface
         }
     }
 
+    /**
+     * @param array<int, list<string>|array<string, list<string>>> $errorsMap
+     */
     public function setErrorsMap(array $errorsMap): ErrorHandler
     {
         foreach ($errorsMap as $statusCode => $array) {
             foreach ($array as $key => $value) {
-                if (is_array($value)) {
+                if (is_string($key)) {
                     $this->errorsMap[$key]['statusCode'] = $statusCode;
-                    $this->errorsMap[$key]['loggerType'] = $value;
+                    $this->errorsMap[$key]['loggerType'] = (array)$value;
                     continue;
                 }
-                $this->errorsMap[$value]['statusCode'] = $statusCode;
+               $this->errorsMap[$value]['statusCode'] = $statusCode;
             }
         }
 
         return $this;
     }
 
-    public function getErrorsMap(): array
-    {
-        return $this->errorsMap;
-    }
 
     /**
      * Catch Errors, Warning, etc
@@ -259,9 +262,13 @@ final class ErrorHandler implements ErrorHandlerInterface
         return $this;
     }
 
+    /**
+     * @param array<int, list<string>> $mappingLoggerType
+     */
     public function setMappingLoggerType(array $mappingLoggerType): ErrorHandler
     {
         $this->mappingLoggerType = $mappingLoggerType;
         return $this;
     }
+
 }
