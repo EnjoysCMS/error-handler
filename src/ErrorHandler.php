@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace EnjoysCMS\ErrorHandler;
 
+use EnjoysCMS\Core\Interfaces\EmitterInterface;
 use EnjoysCMS\ErrorHandler\Output\Html;
 use EnjoysCMS\ErrorHandler\Output\Image;
 use EnjoysCMS\ErrorHandler\Output\Json;
+use EnjoysCMS\ErrorHandler\Output\OutputInterface;
 use EnjoysCMS\ErrorHandler\Output\Plain;
 use EnjoysCMS\ErrorHandler\Output\Svg;
 use EnjoysCMS\ErrorHandler\Output\Xml;
-use HttpSoft\Emitter\EmitterInterface;
-use HttpSoft\Emitter\SapiEmitter;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 final class ErrorHandler implements ErrorHandlerInterface
 {
@@ -49,18 +50,16 @@ final class ErrorHandler implements ErrorHandlerInterface
     private array $mappingCode = [];
     private array $errorsMap = [];
     private array $mappingLoggerType = [];
-    private EmitterInterface $emitter;
     private LoggerInterface $logger;
-    private bool $allowQuit = true;
+    private bool $allowQuit = false;
 
 
     public function __construct(
         private ServerRequestInterface $request,
-        LoggerInterface $logger = null,
-        EmitterInterface $emitter = null
+        private EmitterInterface $emitter,
+        LoggerInterface $logger = null
     ) {
-        $this->logger = $logger ?? new \Psr\Log\NullLogger();
-        $this->emitter = $emitter ?? new SapiEmitter();
+        $this->logger = $logger ?? new NullLogger();
     }
 
     /**
@@ -87,15 +86,16 @@ final class ErrorHandler implements ErrorHandlerInterface
         } catch (\Throwable $e) {
             Html::setHtmlTemplater(); // clear templater to defaults setting
             throw $e;
-        }
-
-        if ($this->allowQuit) {
-            exit;
+        } finally {
+            if ($this->allowQuit) {
+                exit;
+            }
         }
     }
 
-    private function getOutputProcessor()
+    private function getOutputProcessor(): OutputInterface
     {
+        /** @var class-string<OutputInterface> $processor */
         foreach (self::PROCESSORS_MAP as $processor => $mimes) {
             foreach ($mimes as $mime) {
                 if (stripos($this->request->getHeaderLine('Accept'), $mime) !== false) {
@@ -116,7 +116,7 @@ final class ErrorHandler implements ErrorHandlerInterface
         return self::DEFAULT_STATUS_CODE;
     }
 
-    private function sendToLogger(\Throwable $error)
+    private function sendToLogger(\Throwable $error): void
     {
         $loggerTypes = [];
         $typeError = get_class($error);
@@ -159,15 +159,16 @@ final class ErrorHandler implements ErrorHandlerInterface
     /**
      * Catch Errors, Warning, etc
      * @throws \ErrorException
+     * @throws \Throwable
      */
     public function catchErrors(): ErrorHandler
     {
-        $this->displayErrors();
+        $this->displayErrors(false);
         $this->register();
         return $this;
     }
 
-    public function displayErrors(bool $value = false): ErrorHandler
+    public function displayErrors(bool $value): ErrorHandler
     {
         ini_set('display_errors', $value ? '1' : '0');
         return $this;
@@ -179,8 +180,6 @@ final class ErrorHandler implements ErrorHandlerInterface
      */
     public function register(): void
     {
-
-        $logger = $this->logger;
         // Handles throwable, echo output and exit.
         set_exception_handler(function (\Throwable $error): void {
             $this->handle($error);
@@ -188,25 +187,22 @@ final class ErrorHandler implements ErrorHandlerInterface
 
         // Handles PHP execution errors such as warnings and notices.
         set_error_handler(
-            static function (int $severity, string $message, string $file, int $line) use ($logger): bool {
+            static function (int $severity, string $message, string $file, int $line): bool {
                 if (!(error_reporting() & $severity)) {
                     // This error code is not included in error_reporting.
                     return true;
                 }
 
-                $error = new \ErrorException(
-                    sprintf('%s: %s', self::ERROR_NAMES[$severity] ?? '', $message),
-                    0,
-                    $severity,
-                    $file,
-                    $line
-                );
-
                 if (self::isFatalError($severity)) {
-                    throw $error;
+                    throw new \ErrorException(
+                        sprintf('%s: %s', self::ERROR_NAMES[$severity] ?? '', $message),
+                        0,
+                        $severity,
+                        $file,
+                        $line
+                    );
                 }
 
-                $logger->debug($error->getMessage(), $error->getTrace());
                 return true;
             }
         );
@@ -216,14 +212,13 @@ final class ErrorHandler implements ErrorHandlerInterface
             $e = error_get_last();
 
             if ($e !== null && self::isFatalError($e['type'])) {
-                $error = new \ErrorException(
+                throw new \ErrorException(
                     sprintf('%s: %s', self::ERROR_NAMES[$e['type']] ?? '', $e['message']),
                     0,
                     $e['type'],
                     $e['file'],
                     $e['line']
                 );
-                $this->handle($error);
             }
         });
     }
@@ -238,17 +233,17 @@ final class ErrorHandler implements ErrorHandlerInterface
     }
 
 
-    public static function isFatalError($severity): bool
+    public static function isFatalError(int $severity): bool
     {
-        return $severity > 0 && in_array($severity, [
-                E_ERROR,
-                E_PARSE,
-                E_CORE_ERROR,
-                E_CORE_WARNING,
-                E_COMPILE_ERROR,
-                E_COMPILE_WARNING,
-                E_USER_ERROR,
-            ], true);
+        return in_array($severity, [
+            E_ERROR,
+            E_PARSE,
+            E_CORE_ERROR,
+            E_CORE_WARNING,
+            E_COMPILE_ERROR,
+            E_COMPILE_WARNING,
+            E_USER_ERROR,
+        ], true);
     }
 
     public function allowQuit(bool $value = true): ErrorHandler

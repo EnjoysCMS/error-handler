@@ -10,7 +10,7 @@ use Psr\Http\Message\ResponseInterface;
 
 interface OutputInterface
 {
-    public function setError(\Throwable $error);
-    public function setHttpStatusCode(int $status);
+    public function setError(\Throwable $error): OutputInterface;
+    public function setHttpStatusCode(int $status): OutputInterface;
     public function getResponse(): ResponseInterface;
 }
