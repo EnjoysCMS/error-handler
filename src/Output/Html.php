@@ -2,30 +2,35 @@
 
 declare(strict_types=1);
 
-
 namespace EnjoysCMS\ErrorHandler\Output;
 
-
-use EnjoysCMS\ErrorHandler\Error;
+use EnjoysCMS\ErrorHandler\ErrorHandler;
 use EnjoysCMS\ErrorHandler\View\SimpleHtmlView;
 use EnjoysCMS\ErrorHandler\View\ViewInterface;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 
-final class Html extends AbstractOutput implements OutputInterface
+final class Html implements ErrorOutputInterface
 {
 
     /**
      * @var ViewInterface
      */
-    static private $templater;
+    private static $templater;
+    private ResponseInterface $response;
 
-    public function __construct()
+    public function __construct(
+        private \Throwable               $error,
+        ResponseFactoryInterface $responseFactory,
+        private int                      $httpStatusCode = ErrorHandler::DEFAULT_STATUS_CODE,
+         ?string                          $mimeType = null)
     {
-        parent::__construct();
-
+        $this->response = $responseFactory->createResponse($httpStatusCode);
         if (self::$templater === null) {
             self::$templater = new SimpleHtmlView();
         }
+
+
     }
 
     public function getResponse(): ResponseInterface
@@ -34,7 +39,7 @@ final class Html extends AbstractOutput implements OutputInterface
         return $this->response;
     }
 
-    static public function setHtmlTemplater(ViewInterface $temlater = null)
+    public static function setHtmlTemplater(ViewInterface $temlater = null): void
     {
         self::$templater = $temlater;
     }

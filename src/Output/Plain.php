@@ -2,15 +2,11 @@
 
 declare(strict_types=1);
 
-
 namespace EnjoysCMS\ErrorHandler\Output;
 
-
-use EnjoysCMS\ErrorHandler\Error;
-use HttpSoft\Message\Response;
 use Psr\Http\Message\ResponseInterface;
 
-final class Plain extends AbstractOutput implements OutputInterface
+final class Plain extends AbstractErrorOutput implements ErrorOutputInterface
 {
 
     public function getResponse(): ResponseInterface

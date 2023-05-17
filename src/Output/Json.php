@@ -2,18 +2,24 @@
 
 declare(strict_types=1);
 
-
 namespace EnjoysCMS\ErrorHandler\Output;
 
-
-use EnjoysCMS\ErrorHandler\Error;
-use HttpSoft\Message\Response;
-use HttpSoft\Message\ResponseFactory;
+use EnjoysCMS\ErrorHandler\ErrorHandler;
+use EnjoysCMS\ErrorHandler\View\SimpleHtmlView;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 
-final class Json extends AbstractOutput implements OutputInterface
+final class Json  implements ErrorOutputInterface
 {
 
+    public function __construct(
+        private \Throwable               $error,
+        ResponseFactoryInterface $responseFactory,
+        private int                      $httpStatusCode = ErrorHandler::DEFAULT_STATUS_CODE,
+        ?string                          $mimeType = null)
+    {
+        $this->response = $responseFactory->createResponse($this->httpStatusCode);
+    }
     public function getResponse(): ResponseInterface
     {
         $type = get_class($this->error);

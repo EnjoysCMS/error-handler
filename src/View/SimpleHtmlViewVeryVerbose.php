@@ -5,15 +5,14 @@ declare(strict_types=1);
 namespace EnjoysCMS\ErrorHandler\View;
 
 use EnjoysCMS\ErrorHandler\ErrorHandler;
-use GuzzleHttp\Psr7\Response;
+use HttpSoft\Message\Response;
 
 final class SimpleHtmlViewVeryVerbose implements ViewInterface
 {
     public function getContent(\Throwable $error, int $statusCode = ErrorHandler::DEFAULT_STATUS_CODE): string
     {
+        /** @var string $phrase */
         $phrase = $this->getPhrase($statusCode);
-        $type = get_class($error);
-
         $message = htmlspecialchars($error->__toString());
 
         return <<<HTML
@@ -56,7 +55,7 @@ HTML;
      */
     private function getPhrase(int $statusCode): mixed
     {
-        $reflection = new \ReflectionClass(\HttpSoft\Message\Response::class);
+        $reflection = new \ReflectionClass(Response::class);
         $phrases = $reflection->getProperty('phrases');
         $phrases->setAccessible(true);
         return $phrases->getValue()[$statusCode] ?? 'Unknown error';

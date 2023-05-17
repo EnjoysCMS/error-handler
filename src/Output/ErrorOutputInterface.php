@@ -8,9 +8,7 @@ namespace EnjoysCMS\ErrorHandler\Output;
 
 use Psr\Http\Message\ResponseInterface;
 
-interface OutputInterface
+interface ErrorOutputInterface
 {
-    public function setError(\Throwable $error): OutputInterface;
-    public function setHttpStatusCode(int $status): OutputInterface;
     public function getResponse(): ResponseInterface;
 }

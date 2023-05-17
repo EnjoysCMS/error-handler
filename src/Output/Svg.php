@@ -6,10 +6,9 @@ declare(strict_types=1);
 namespace EnjoysCMS\ErrorHandler\Output;
 
 
-use HttpSoft\Message\Response;
 use Psr\Http\Message\ResponseInterface;
 
-final class Svg extends AbstractOutput implements OutputInterface
+final class Svg extends AbstractErrorOutput implements ErrorOutputInterface
 {
     public function getResponse(): ResponseInterface
     {

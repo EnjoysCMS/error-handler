@@ -6,15 +6,14 @@ declare(strict_types=1);
 namespace EnjoysCMS\ErrorHandler\Output;
 
 
-use HttpSoft\Message\Response;
 use Psr\Http\Message\ResponseInterface;
 
-final class Image extends AbstractOutput implements OutputInterface
+final class Image extends AbstractErrorOutput implements ErrorOutputInterface
 {
 
     public function getResponse(): ResponseInterface
     {
-        $response = (new Response())
+        $response = $this->response
             ->withHeader('Content-Type', $this->mimeType)
         ;
 

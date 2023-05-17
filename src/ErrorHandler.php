@@ -8,11 +8,12 @@ use EnjoysCMS\Core\Interfaces\EmitterInterface;
 use EnjoysCMS\ErrorHandler\Output\Html;
 use EnjoysCMS\ErrorHandler\Output\Image;
 use EnjoysCMS\ErrorHandler\Output\Json;
-use EnjoysCMS\ErrorHandler\Output\OutputInterface;
+use EnjoysCMS\ErrorHandler\Output\ErrorOutputInterface;
 use EnjoysCMS\ErrorHandler\Output\Plain;
 use EnjoysCMS\ErrorHandler\Output\Svg;
 use EnjoysCMS\ErrorHandler\Output\Xml;
 use PHPUnit\Framework\InvalidArgumentException;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -69,6 +70,7 @@ final class ErrorHandler implements ErrorHandlerInterface
     public function __construct(
         private ServerRequestInterface $request,
         private EmitterInterface $emitter,
+        private ResponseFactoryInterface $responseFactory,
         LoggerInterface $logger = null
     ) {
         $this->logger = $logger ?? new NullLogger();
@@ -86,15 +88,10 @@ final class ErrorHandler implements ErrorHandlerInterface
             $httpStatusCode = $this->getStatusCode($error);
             $this->sendToLogger($error, $this->loggerTypeMap[$httpStatusCode] ?? []);
 
-            $output = $this->getOutputProcessor();
+            $response = $this->getOutputProcessor($error, $httpStatusCode)
+                ->getResponse();
 
-            $this->emitter->emit(
-                $output
-                    ->setError($error)
-                    ->setHttpStatusCode($httpStatusCode)
-                    ->getResponse()
-                    ->withStatus($httpStatusCode)
-            );
+            $this->emitter->emit($response);
         } catch (\Throwable $e) {
             Html::setHtmlTemplater(); // clear templater to defaults setting
             throw $e;
@@ -105,17 +102,17 @@ final class ErrorHandler implements ErrorHandlerInterface
         }
     }
 
-    private function getOutputProcessor(): OutputInterface
+    private function getOutputProcessor(\Throwable $error, int $httpStatusCode): ErrorOutputInterface
     {
-        /** @var class-string<OutputInterface> $processor */
+        /** @var class-string<ErrorOutputInterface> $processor */
         foreach (self::PROCESSORS_MAP as $processor => $mimes) {
             foreach ($mimes as $mime) {
                 if (stripos($this->request->getHeaderLine('Accept'), $mime) !== false) {
-                    return new $processor($mime);
+                    return new $processor($error, $this->responseFactory, $httpStatusCode, $mime);
                 }
             }
         }
-        return new Html();
+        return new Html($error, $this->responseFactory, $httpStatusCode);
     }
 
     private function getStatusCode(\Throwable $error): int
@@ -136,7 +133,7 @@ final class ErrorHandler implements ErrorHandlerInterface
     {
         $typeError = get_class($error);
 
-        if (array_key_exists($typeError, $this->loggerTypeMap)){
+        if (array_key_exists($typeError, $this->loggerTypeMap)) {
             $loggerTypes = $this->loggerTypeMap[$typeError];
         }
 

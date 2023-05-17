@@ -6,10 +6,9 @@ declare(strict_types=1);
 namespace EnjoysCMS\ErrorHandler\Output;
 
 
-use HttpSoft\Message\Response;
 use Psr\Http\Message\ResponseInterface;
 
-final class Xml extends AbstractOutput implements OutputInterface
+final class Xml extends AbstractErrorOutput implements ErrorOutputInterface
 {
     public function getResponse(): ResponseInterface
     {
