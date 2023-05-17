@@ -12,6 +12,7 @@ use EnjoysCMS\ErrorHandler\Output\OutputInterface;
 use EnjoysCMS\ErrorHandler\Output\Plain;
 use EnjoysCMS\ErrorHandler\Output\Svg;
 use EnjoysCMS\ErrorHandler\Output\Xml;
+use PHPUnit\Framework\InvalidArgumentException;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -48,15 +49,20 @@ final class ErrorHandler implements ErrorHandlerInterface
     public const DEFAULT_STATUS_CODE = 500;
 
     /**
-     * @var array<string, array{loggerType: list<string>, statusCode: int}>
+     * @var array<int, list<string>>
      */
     private array $errorsMap = [];
 
     /**
-     * @var array<int, list<string>>
+     * @var array<array-key, list<string>>
      */
-    private array $mappingLoggerType = [];
+    private array $loggerTypeMap = [];
+
     private LoggerInterface $logger;
+
+    /**
+     * @deprecated
+     */
     private bool $allowQuit = false;
 
 
@@ -78,7 +84,7 @@ final class ErrorHandler implements ErrorHandlerInterface
 
         try {
             $httpStatusCode = $this->getStatusCode($error);
-            $this->sendToLogger($error, $this->mappingLoggerType[$httpStatusCode] ?? []);
+            $this->sendToLogger($error, $this->loggerTypeMap[$httpStatusCode] ?? []);
 
             $output = $this->getOutputProcessor();
 
@@ -115,10 +121,11 @@ final class ErrorHandler implements ErrorHandlerInterface
     private function getStatusCode(\Throwable $error): int
     {
         $typeError = get_class($error);
-        if (in_array($typeError, array_keys($this->errorsMap))) {
-            return $this->errorsMap[$typeError]['statusCode'] ?? self::DEFAULT_STATUS_CODE;
+        foreach ($this->errorsMap as $statusCode => $stack) {
+            if (in_array($typeError, $stack)) {
+                return $statusCode;
+            }
         }
-
         return self::DEFAULT_STATUS_CODE;
     }
 
@@ -129,10 +136,8 @@ final class ErrorHandler implements ErrorHandlerInterface
     {
         $typeError = get_class($error);
 
-        if (in_array($typeError, array_keys($this->errorsMap))
-            && array_key_exists('loggerType', $this->errorsMap[$typeError])
-        ) {
-            $loggerTypes = $this->errorsMap[$typeError]['loggerType'];
+        if (array_key_exists($typeError, $this->loggerTypeMap)){
+            $loggerTypes = $this->loggerTypeMap[$typeError];
         }
 
         foreach ($loggerTypes as $loggerType) {
@@ -147,24 +152,22 @@ final class ErrorHandler implements ErrorHandlerInterface
     }
 
     /**
-     * @param array<int, list<string>|array<string, list<string>>> $errorsMap
+     * @param array<int, list<string>> $errorsMap
      */
     public function setErrorsMap(array $errorsMap): ErrorHandler
     {
-        foreach ($errorsMap as $statusCode => $array) {
-            foreach ($array as $key => $value) {
-                if (is_string($key)) {
-                    $this->errorsMap[$key]['statusCode'] = $statusCode;
-                    $this->errorsMap[$key]['loggerType'] = (array)$value;
-                    continue;
-                }
-               $this->errorsMap[$value]['statusCode'] = $statusCode;
-            }
-        }
-
+        $this->errorsMap = $errorsMap;
         return $this;
     }
 
+    /**
+     * @param array<array-key, list<string>> $loggerTypeMap
+     */
+    public function setLoggerTypeMap(array $loggerTypeMap): ErrorHandler
+    {
+        $this->loggerTypeMap = $loggerTypeMap;
+        return $this;
+    }
 
     /**
      * Catch Errors, Warning, etc
@@ -181,6 +184,15 @@ final class ErrorHandler implements ErrorHandlerInterface
     public function displayErrors(bool $value): ErrorHandler
     {
         ini_set('display_errors', $value ? '1' : '0');
+        return $this;
+    }
+
+    /**
+     * @deprecated
+     */
+    public function allowQuit(bool $value = true): ErrorHandler
+    {
+        $this->allowQuit = $value;
         return $this;
     }
 
@@ -254,21 +266,6 @@ final class ErrorHandler implements ErrorHandlerInterface
             E_COMPILE_WARNING,
             E_USER_ERROR,
         ], true);
-    }
-
-    public function allowQuit(bool $value = true): ErrorHandler
-    {
-        $this->allowQuit = $value;
-        return $this;
-    }
-
-    /**
-     * @param array<int, list<string>> $mappingLoggerType
-     */
-    public function setMappingLoggerType(array $mappingLoggerType): ErrorHandler
-    {
-        $this->mappingLoggerType = $mappingLoggerType;
-        return $this;
     }
 
 }
