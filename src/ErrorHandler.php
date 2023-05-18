@@ -88,7 +88,7 @@ final class ErrorHandler implements ErrorHandlerInterface
             $httpStatusCode = $this->getStatusCode($error);
             $this->sendToLogger($error, $this->loggerTypeMap[$httpStatusCode] ?? []);
 
-            $response = $this->getOutputProcessor($error, $httpStatusCode)
+            $response = $this->getErrorOutput($error, $httpStatusCode)
                 ->getResponse();
 
             $this->emitter->emit($response);
@@ -102,17 +102,17 @@ final class ErrorHandler implements ErrorHandlerInterface
         }
     }
 
-    private function getOutputProcessor(\Throwable $error, int $httpStatusCode): ErrorOutputInterface
+    private function getErrorOutput(\Throwable $error, int $httpStatusCode): ErrorOutputInterface
     {
         /** @var class-string<ErrorOutputInterface> $processor */
         foreach (self::PROCESSORS_MAP as $processor => $mimes) {
             foreach ($mimes as $mime) {
                 if (stripos($this->request->getHeaderLine('Accept'), $mime) !== false) {
-                    return new $processor($error, $this->responseFactory, $httpStatusCode, $mime);
+                    return new $processor(new Error($error, $httpStatusCode, $mime), $this->responseFactory);
                 }
             }
         }
-        return new Html($error, $this->responseFactory, $httpStatusCode);
+        return new Html(new Error($error, $httpStatusCode, 'text/html'), $this->responseFactory);
     }
 
     private function getStatusCode(\Throwable $error): int

@@ -6,21 +6,29 @@ declare(strict_types=1);
 namespace EnjoysCMS\ErrorHandler\Output;
 
 
+use EnjoysCMS\ErrorHandler\Error;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 
-final class Image extends AbstractErrorOutput implements ErrorOutputInterface
+final class Image implements ErrorOutputInterface
 {
+
+    private ResponseInterface $response;
+
+    public function __construct(
+        private Error $error,
+        ResponseFactoryInterface $responseFactory
+    ) {
+        $this->response = $responseFactory
+            ->createResponse($this->error->getHttpStatusCode())
+            ->withHeader('Content-Type', $this->error->getMimeType());
+    }
 
     public function getResponse(): ResponseInterface
     {
-        $response = $this->response
-            ->withHeader('Content-Type', $this->mimeType)
-        ;
-
         ob_start();
         $image = $this->createImage();
-
-        switch ($this->mimeType) {
+        switch ($this->error->getMimeType()) {
             case 'image/gif':
                 imagegif($image);
                 break;
@@ -35,15 +43,16 @@ final class Image extends AbstractErrorOutput implements ErrorOutputInterface
                 break;
         }
 
-        $response->getBody()->write((string)ob_get_clean());
-        return $response;
+        $this->response->getBody()->write((string)ob_get_clean());
+
+        return $this->response;
     }
 
     private function createImage()
     {
         $type = get_class($this->error);
-        $code = empty($this->error->getCode()) ? "" : "[{$this->error->getCode()}]";
-        $message = $this->error->getMessage();
+        $code = empty($this->error->getError()->getCode()) ? "" : "[{$this->error->getError()->getCode()}]";
+        $message = $this->error->getError()->getMessage();
 
         $size = 200;
         $image = imagecreatetruecolor($size, $size);
