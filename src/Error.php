@@ -2,7 +2,10 @@
 
 namespace EnjoysCMS\ErrorHandler;
 
-class Error
+/**
+ * @readonly
+ */
+final class Error
 {
     public function __construct(private \Throwable $error, private int $httpStatusCode, private ?string $mimeType = null)
     {
