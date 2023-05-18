@@ -24,13 +24,11 @@ final class Json implements ErrorOutputInterface
 
     public function getResponse(): ResponseInterface
     {
-        $type = get_class($this->error);
-
         $this->response->getBody()->write(
             json_encode(
                 [
                     'error' => [
-                        'type' => $type,
+                        'type' => $this->error->getType(),
                         'code' => $this->error->getCode(),
                         'message' => $this->error->getMessage()
                     ]

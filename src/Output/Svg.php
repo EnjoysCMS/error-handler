@@ -36,7 +36,6 @@ final class Svg implements ErrorOutputInterface
     <text x="20" y="60"  title="{$this->error->getMessage()}">
         {$this->error->getMessage()}
     </text>
-
 </svg>
 SVG
         );

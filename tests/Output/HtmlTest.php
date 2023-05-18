@@ -2,19 +2,29 @@
 
 namespace EnjoysCMS\Tests\ErrorHandler\Output;
 
+use EnjoysCMS\ErrorHandler\Error;
+use EnjoysCMS\ErrorHandler\Output\ErrorOutputInterface;
 use EnjoysCMS\ErrorHandler\Output\Html;
+use EnjoysCMS\ErrorHandler\Output\Plain;
+use HttpSoft\Message\ResponseFactory;
 use PHPUnit\Framework\TestCase;
 
 class HtmlTest extends TestCase
 {
-    protected function setUp(): void
+
+    public function testResponseHtml()
     {
-        $this->markTestIncomplete(
-            'Test incomplete'
+        $errorOutput = new Html(
+            new Error(new \InvalidArgumentException('This is the Error message'), 500),
+            new ResponseFactory()
         );
+        $response = $errorOutput->getResponse();
+        $this->assertSame(500, $response->getStatusCode());
+        $this->assertSame('Internal Server Error', $response->getReasonPhrase());
+
+        $body = $response->getBody()->__toString();
+        $this->assertNotEmpty($body);
+        $this->assertStringContainsString('<title>Error 500. Internal Server Error</title>', $body);
     }
 
-    public function testSample()
-    {
-    }
 }

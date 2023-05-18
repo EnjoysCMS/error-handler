@@ -25,8 +25,8 @@ final class Plain implements ErrorOutputInterface
     {
         $this->response->getBody()->write(
             sprintf(
-                "%s %s\n%s",
-                empty($this->error->getCode()) ? "" : "[{$this->error->getCode()}]",
+                "%s%s\n%s",
+                empty($this->error->getCode()) ? "" : "[{$this->error->getCode()}] ",
                 $this->error->getType(),
                 $this->error->getMessage()
             )

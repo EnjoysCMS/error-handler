@@ -116,9 +116,8 @@ final class ErrorHandler implements ErrorHandlerInterface
 
     private function getStatusCode(\Throwable $error): int
     {
-        $typeError = get_class($error);
         foreach ($this->errorsMap as $statusCode => $stack) {
-            if (in_array($typeError, $stack)) {
+            if (in_array($error::class, $stack)) {
                 return $statusCode;
             }
         }
