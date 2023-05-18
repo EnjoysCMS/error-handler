@@ -28,8 +28,8 @@ final class Xml implements ErrorOutputInterface
 <?xml version="1.0" encoding="utf-8"?>
 <error>
     <type>{$this->error->getType()}</type>
-    <code>{$this->error->getError()->getCode()}</code>
-    <message>{$this->error->getError()->getMessage()}</message>
+    <code>{$this->error->getCode()}</code>
+    <message>{$this->error->getMessage()}</message>
 </error>
 XML
         );

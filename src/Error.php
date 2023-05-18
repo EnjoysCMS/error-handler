@@ -27,4 +27,14 @@ class Error
     {
         return $this->error::class;
     }
+
+    public function getMessage(): string
+    {
+        return $this->error->getMessage();
+    }
+
+    public function getCode(): int
+    {
+        return $this->error->getCode();
+    }
 }

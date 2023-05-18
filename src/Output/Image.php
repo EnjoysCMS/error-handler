@@ -51,8 +51,8 @@ final class Image implements ErrorOutputInterface
     private function createImage()
     {
         $type = get_class($this->error);
-        $code = empty($this->error->getError()->getCode()) ? "" : "[{$this->error->getError()->getCode()}]";
-        $message = $this->error->getError()->getMessage();
+        $code = empty($this->error->getCode()) ? "" : "[{$this->error->getCode()}]";
+        $message = $this->error->getMessage();
 
         $size = 200;
         $image = imagecreatetruecolor($size, $size);

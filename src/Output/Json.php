@@ -31,8 +31,8 @@ final class Json implements ErrorOutputInterface
                 [
                     'error' => [
                         'type' => $type,
-                        'code' => $this->error->getError()->getCode(),
-                        'message' => $this->error->getError()->getMessage()
+                        'code' => $this->error->getCode(),
+                        'message' => $this->error->getMessage()
                     ]
                 ]
             )

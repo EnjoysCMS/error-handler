@@ -25,7 +25,7 @@ final class Svg implements ErrorOutputInterface
 
     public function getResponse(): ResponseInterface
     {
-        $code = empty($this->error->getError()->getCode()) ? "" : "[{$this->error->getError()->getCode()}]";
+        $code = empty($this->error->getCode()) ? "" : "[{$this->error->getCode()}]";
         $type = $this->error->getType();
         $this->response->getBody()->write(
             <<<SVG
@@ -33,8 +33,8 @@ final class Svg implements ErrorOutputInterface
     <text x="20" y="30" title="$type">
         $code $type
     </text>
-    <text x="20" y="60"  title="{$this->error->getError()->getMessage()}">
-        {$this->error->getError()->getMessage()}
+    <text x="20" y="60"  title="{$this->error->getMessage()}">
+        {$this->error->getMessage()}
     </text>
 
 </svg>
