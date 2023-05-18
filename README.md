@@ -1,19 +1,18 @@
 ### ErrorHandler
 
-```php 
-$errorHandler = new errorHandler(logger: ?LoggerInterface, emitter: ?EmitterInterface);
+```php
+$errorHandler = new \EnjoysCMS\ErrorHandler\ErrorHandler(
+    request: $request, //required, Psr\Http\Message\ServerRequestInterface::class
+    emitter: $emitter, //required, EnjoysCMS\Core\Interfaces\EmitterInterface::class
+    responseFactory: $responseFactory, //required, Psr\Http\Message\ResponseFactoryInterface::class
+    logger: $logger,  // Psr\Log\LoggerInterface::class or null
+);
 
-// Все ошибки будут выводится с http статусом 500, с помощью setErrorsMap() можно переопределить статусы ошибок.
-// и заодно определить какие ошибки передавать в logger
+// Все ошибки будут выводиться с http статусом 500, с помощью setErrorsMap() можно переопределить статусы ошибок.
+// По-умолчанию в logger передаваться ничего не будет.
 $errorHandler->setErrorsMap([
     404 => [
-        // Если название класса установлено в качестве ключа, а значения string[], то будет вызван logger
-        // с указанными методами
-        NotFoundException::class => [
-            'info', 'warning'
-        ],
-        
-        // logger вызван не будет
+        NotFoundException::class,
         NoResultException::class,
         //...
     ],
@@ -30,19 +29,31 @@ $errorHandler->setErrorsMap([
     new \EnjoysCMS\ErrorHandler\View\SimpleHtmlViewVerbose()
 );
 
+// Для передачи ошибки в logger, необходимо сопоставить ошибки с уровнем лога при помощи setLoggerTypeMap()
+$errorHandler->setLoggerTypeMap([
+    // для конкретно этой ошибки, будет вызван $logger->info()
+    NoResultException::class => ['info'], 
+    // для конкретно этой ошибки, будет вызван $logger->debug() и $logger->warning()
+    NotFoundException::class => ['debug', 'warning'], 
+    // для всех ошибок со статусом 500 будет вызван $logger->error()
+    500 => ['error'], 
+    // эта ошибка со статусом 500 вызвать $logger->error() НЕ будет, но будет вызван $logger->critical()
+    \InvalidArgumentException::class => ['critical'], 
+    //...
+]);
+
 
 try {
     // ... something code
 } catch(\Throwable $error) {
-    $errorHandler->handle($error, Psr\Http\Message\ServerRequestInterface $request);
+    $errorHandler->handle($error);
 }
-
 
 ```
 
 ### ErrorHandlerMiddleware
-```php 
-$errorHandler = new errorHandler();
+```php
+$errorHandler = new \EnjoysCMS\ErrorHandler\ErrorHandler();
 // ... more setting error handler
-$errorHandlerMiddleware = new ErrorHandlerMiddleware($errorHandler);
+$errorHandlerMiddleware = new \EnjoysCMS\ErrorHandler\ErrorHandlerMiddleware($errorHandler);
 ```
