@@ -6,6 +6,11 @@
             "EnjoysCMS\\ErrorHandler\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "EnjoysCMS\\Tests\\ErrorHandler\\": "tests/"
+        }
+    },
     "authors": [
         {
             "name": "Enjoys",
@@ -19,5 +24,11 @@
         "psr/http-message": "^1.0|^2.0",
         "psr/http-server-middleware": "^1.0",
         "enjoyscms/core": "^4.7.3"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6|^10.1"
+    },
+    "scripts": {
+        "tests": "@php ./vendor/bin/phpunit tests"
     }
 }

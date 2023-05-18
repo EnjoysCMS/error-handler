@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace EnjoysCMS\ErrorHandler;
 
 use EnjoysCMS\Core\Interfaces\EmitterInterface;
+use EnjoysCMS\ErrorHandler\Output\ErrorOutputInterface;
 use EnjoysCMS\ErrorHandler\Output\Html;
 use EnjoysCMS\ErrorHandler\Output\Image;
 use EnjoysCMS\ErrorHandler\Output\Json;
-use EnjoysCMS\ErrorHandler\Output\ErrorOutputInterface;
 use EnjoysCMS\ErrorHandler\Output\Plain;
 use EnjoysCMS\ErrorHandler\Output\Svg;
 use EnjoysCMS\ErrorHandler\Output\Xml;
-use PHPUnit\Framework\InvalidArgumentException;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
