@@ -17,6 +17,7 @@
         "ext-gd": "*",
         "psr/log": "^1.0|^2.0|^3.0",
         "psr/http-message": "^1.0|^2.0",
-        "psr/http-server-middleware": "^1.0"
+        "psr/http-server-middleware": "^1.0",
+        "enjoyscms/core": "^4.7.3"
     }
 }
