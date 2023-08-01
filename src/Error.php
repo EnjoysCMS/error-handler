@@ -2,16 +2,18 @@
 
 namespace EnjoysCMS\ErrorHandler;
 
-/**
- * @readonly
- */
+use Throwable;
+
 final class Error
 {
-    public function __construct(private \Throwable $error, private int $httpStatusCode, private ?string $mimeType = null)
-    {
+    public function __construct(
+        private readonly Throwable $error,
+        private readonly int $httpStatusCode,
+        private readonly ?string $mimeType = null
+    ) {
     }
 
-    public function getError(): \Throwable
+    public function getError(): Throwable
     {
         return $this->error;
     }

@@ -16,7 +16,7 @@ final class Image implements ErrorOutputInterface
     private ResponseInterface $response;
 
     public function __construct(
-        private Error $error,
+        private readonly Error $error,
         ResponseFactoryInterface $responseFactory
     ) {
         $this->response = $responseFactory

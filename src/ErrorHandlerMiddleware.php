@@ -13,7 +13,7 @@ use Throwable;
 final class ErrorHandlerMiddleware  implements MiddlewareInterface
 {
 
-    public function __construct(private ErrorHandlerInterface $errorHandler)
+    public function __construct(private readonly ErrorHandlerInterface $errorHandler)
     {
     }
 

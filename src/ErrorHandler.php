@@ -12,10 +12,12 @@ use EnjoysCMS\ErrorHandler\Output\Json;
 use EnjoysCMS\ErrorHandler\Output\Plain;
 use EnjoysCMS\ErrorHandler\Output\Svg;
 use EnjoysCMS\ErrorHandler\Output\Xml;
+use ErrorException;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Throwable;
 
 final class ErrorHandler implements ErrorHandlerInterface
 {
@@ -58,8 +60,6 @@ final class ErrorHandler implements ErrorHandlerInterface
      */
     private array $loggerTypeMap = [];
 
-    private LoggerInterface $logger;
-
     /**
      * @deprecated
      */
@@ -67,18 +67,17 @@ final class ErrorHandler implements ErrorHandlerInterface
 
 
     public function __construct(
-        private ServerRequestInterface $request,
-        private EmitterInterface $emitter,
-        private ResponseFactoryInterface $responseFactory,
-        LoggerInterface $logger = null
+        private readonly ServerRequestInterface $request,
+        private readonly EmitterInterface $emitter,
+        private readonly ResponseFactoryInterface $responseFactory,
+        private readonly LoggerInterface $logger = new NullLogger()
     ) {
-        $this->logger = $logger ?? new NullLogger();
     }
 
     /**
-     * @throws \Throwable
+     * @throws Throwable
      */
-    public function handle(\Throwable $error): void
+    public function handle(Throwable $error): void
     {
         // disable error capturing to avoid recursive errors while handling exceptions
         $this->unregister();
@@ -91,7 +90,7 @@ final class ErrorHandler implements ErrorHandlerInterface
                 ->getResponse();
 
             $this->emitter->emit($response);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Html::setHtmlTemplater(); // clear templater to defaults setting
             throw $e;
         } finally {
@@ -101,7 +100,7 @@ final class ErrorHandler implements ErrorHandlerInterface
         }
     }
 
-    private function getErrorOutput(\Throwable $error, int $httpStatusCode): ErrorOutputInterface
+    private function getErrorOutput(Throwable $error, int $httpStatusCode): ErrorOutputInterface
     {
         /** @var class-string<ErrorOutputInterface> $processor */
         foreach (self::PROCESSORS_MAP as $processor => $mimes) {
@@ -114,7 +113,7 @@ final class ErrorHandler implements ErrorHandlerInterface
         return new Html(new Error($error, $httpStatusCode, 'text/html'), $this->responseFactory);
     }
 
-    private function getStatusCode(\Throwable $error): int
+    private function getStatusCode(Throwable $error): int
     {
         foreach ($this->errorsMap as $statusCode => $stack) {
             if (in_array($error::class, $stack)) {
@@ -127,7 +126,7 @@ final class ErrorHandler implements ErrorHandlerInterface
     /**
      * @param list<string> $loggerTypes
      */
-    private function sendToLogger(\Throwable $error, array $loggerTypes = []): void
+    private function sendToLogger(Throwable $error, array $loggerTypes = []): void
     {
         $typeError = get_class($error);
 
@@ -166,8 +165,8 @@ final class ErrorHandler implements ErrorHandlerInterface
 
     /**
      * Catch Errors, Warning, etc
-     * @throws \ErrorException
-     * @throws \Throwable
+     * @throws ErrorException
+     * @throws Throwable
      */
     public function catchErrors(): ErrorHandler
     {
@@ -193,12 +192,12 @@ final class ErrorHandler implements ErrorHandlerInterface
 
     /**
      * Register this error handler.
-     * @throws \Throwable
+     * @throws Throwable
      */
     public function register(): void
     {
         // Handles throwable, echo output and exit.
-        set_exception_handler(function (\Throwable $error): void {
+        set_exception_handler(function (Throwable $error): void {
             $this->handle($error);
         });
 
@@ -211,7 +210,7 @@ final class ErrorHandler implements ErrorHandlerInterface
                 }
 
                 if (self::isFatalError($severity)) {
-                    throw new \ErrorException(
+                    throw new ErrorException(
                         sprintf('%s: %s', self::ERROR_NAMES[$severity] ?? '', $message),
                         0,
                         $severity,
@@ -229,7 +228,7 @@ final class ErrorHandler implements ErrorHandlerInterface
             $e = error_get_last();
 
             if ($e !== null && self::isFatalError($e['type'])) {
-                throw new \ErrorException(
+                throw new ErrorException(
                     sprintf('%s: %s', self::ERROR_NAMES[$e['type']] ?? '', $e['message']),
                     0,
                     $e['type'],
