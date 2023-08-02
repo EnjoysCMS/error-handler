@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace EnjoysCMS\ErrorHandler;
 
-use EnjoysCMS\Core\Interfaces\EmitterInterface;
+use EnjoysCMS\Core\Http\Emitter\EmitterInterface;
 use EnjoysCMS\ErrorHandler\Output\ErrorOutputInterface;
 use EnjoysCMS\ErrorHandler\Output\Html;
 use EnjoysCMS\ErrorHandler\Output\Image;
