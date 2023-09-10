@@ -17,6 +17,8 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use ReflectionClass;
+use RuntimeException;
 use Throwable;
 
 final class ErrorHandler implements ErrorHandlerInterface
@@ -64,6 +66,8 @@ final class ErrorHandler implements ErrorHandlerInterface
      * @deprecated
      */
     private bool $allowQuit = false;
+
+    private string $deprecationsLoggerType = 'notice';
 
 
     public function __construct(
@@ -203,7 +207,18 @@ final class ErrorHandler implements ErrorHandlerInterface
 
         // Handles PHP execution errors such as warnings and notices.
         set_error_handler(
-            static function (int $severity, string $message, string $file, int $line): bool {
+            function (int $severity, string $message, string $file, int $line): bool {
+                if (in_array($severity, [E_USER_DEPRECATED, E_DEPRECATED], true)) {
+                    $this->logger->{$this->deprecationsLoggerType}(
+                        sprintf(
+                            'Deprecation: %s in %s on line %s',
+                            $message,
+                            $file,
+                            $line
+                        )
+                    );
+                }
+
                 if (!(error_reporting() & $severity)) {
                     // This error code is not included in error_reporting.
                     return true;
@@ -260,6 +275,31 @@ final class ErrorHandler implements ErrorHandlerInterface
             E_COMPILE_WARNING,
             E_USER_ERROR,
         ], true);
+    }
+
+    public function setDeprecationsLoggerType(string $method): ErrorHandler
+    {
+        if (!method_exists($this->logger, $method) || $method === 'log') {
+            throw new RuntimeException(
+                sprintf(
+                    '%s not allowed, allowed only (%s)',
+                    $method,
+                    implode(
+                        ', ',
+                        array_filter(
+                            array_map(fn($item) => $item->name,
+                                (new ReflectionClass(LoggerInterface::class))->getMethods()
+                            ),
+                            function ($item) {
+                                return $item !== 'log';
+                            }
+                        )
+                    )
+                )
+            );
+        }
+        $this->deprecationsLoggerType = $method;
+        return $this;
     }
 
 }
