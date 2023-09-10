@@ -17,8 +17,6 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use ReflectionClass;
-use RuntimeException;
 use Throwable;
 
 final class ErrorHandler implements ErrorHandlerInterface
@@ -67,13 +65,11 @@ final class ErrorHandler implements ErrorHandlerInterface
      */
     private bool $allowQuit = false;
 
-    private string $deprecationsLoggerType = 'notice';
-
-
     public function __construct(
         private readonly ServerRequestInterface $request,
         private readonly EmitterInterface $emitter,
         private readonly ResponseFactoryInterface $responseFactory,
+        private readonly DeprecationsHandlerInterface $deprecationsHandler,
         private readonly LoggerInterface $logger = new NullLogger()
     ) {
     }
@@ -208,16 +204,6 @@ final class ErrorHandler implements ErrorHandlerInterface
         // Handles PHP execution errors such as warnings and notices.
         set_error_handler(
             function (int $severity, string $message, string $file, int $line): bool {
-                if (in_array($severity, [E_USER_DEPRECATED, E_DEPRECATED], true)) {
-                    $this->logger->{$this->deprecationsLoggerType}(
-                        sprintf(
-                            'Deprecation: %s in %s on line %s',
-                            $message,
-                            $file,
-                            $line
-                        )
-                    );
-                }
 
                 if (!(error_reporting() & $severity)) {
                     // This error code is not included in error_reporting.
@@ -237,6 +223,9 @@ final class ErrorHandler implements ErrorHandlerInterface
                 return true;
             }
         );
+
+        // Handles deprecations
+        $this->deprecationsHandler->register();
 
         // Handles fatal error.
         register_shutdown_function(function (): void {
@@ -277,29 +266,5 @@ final class ErrorHandler implements ErrorHandlerInterface
         ], true);
     }
 
-    public function setDeprecationsLoggerType(string $method): ErrorHandler
-    {
-        if (!method_exists($this->logger, $method) || $method === 'log') {
-            throw new RuntimeException(
-                sprintf(
-                    '%s not allowed, allowed only (%s)',
-                    $method,
-                    implode(
-                        ', ',
-                        array_filter(
-                            array_map(fn($item) => $item->name,
-                                (new ReflectionClass(LoggerInterface::class))->getMethods()
-                            ),
-                            function ($item) {
-                                return $item !== 'log';
-                            }
-                        )
-                    )
-                )
-            );
-        }
-        $this->deprecationsLoggerType = $method;
-        return $this;
-    }
 
 }
