@@ -16,6 +16,8 @@ final class DeprecationsHandler implements DeprecationsHandlerInterface
 {
     private string $loggerLevel = 'notice';
 
+    private string $format = '%s in %s on line %s';
+
     public function __construct(private LoggerInterface $logger, ?string $loggerLevel = null, ?string $name = null)
     {
         $this->withName($name);
@@ -38,7 +40,7 @@ final class DeprecationsHandler implements DeprecationsHandlerInterface
                     $this->logger->log(
                         $this->loggerLevel,
                         sprintf(
-                            'Deprecation: %s in %s on line %s',
+                            $this->format,
                             $message,
                             $file,
                             $line
@@ -70,6 +72,12 @@ final class DeprecationsHandler implements DeprecationsHandlerInterface
             );
         }
         $this->loggerLevel = $level;
+        return $this;
+    }
+
+    public function setFormat(string $format): DeprecationsHandler
+    {
+        $this->format = $format;
         return $this;
     }
 }
