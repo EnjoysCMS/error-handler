@@ -70,7 +70,7 @@ final class ErrorHandler implements ErrorHandlerInterface
         private readonly EmitterInterface $emitter,
         private readonly ResponseFactoryInterface $responseFactory,
         private readonly DeprecationsHandlerInterface $deprecationsHandler,
-        private readonly LoggerInterface $logger = new NullLogger()
+        private readonly LoggerInterface $logger
     ) {
     }
 
