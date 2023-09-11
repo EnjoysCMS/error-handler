@@ -57,7 +57,9 @@ final class ErrorHandler implements ErrorHandlerInterface
     /**
      * @var array<array-key, list<string>>
      */
-    private array $loggerTypeMap = [];
+    private array $loggerTypeMap = [
+        500 => ['error']
+    ];
 
     /**
      * @deprecated
@@ -135,6 +137,7 @@ final class ErrorHandler implements ErrorHandlerInterface
 
         foreach ($loggerTypes as $loggerType) {
             if (method_exists($this->logger, $loggerType)) {
+
                 $this->logger->$loggerType(sprintf("%s %s\n%s", $typeError, $error->getCode(), $error->getMessage()), [
                     'code' => $error->getCode(),
                     'line' => $error->getLine(),
