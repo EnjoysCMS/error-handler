@@ -3,7 +3,7 @@
 namespace EnjoysCMS\Tests\ErrorHandler;
 
 use EnjoysCMS\Core\Interfaces\EmitterInterface;
-use EnjoysCMS\ErrorHandler\ErrorHandler;
+use EnjoysCMS\ErrorHandler\ExceptionHandler;
 use EnjoysCMS\ErrorHandler\Output\ErrorOutputInterface;
 use EnjoysCMS\ErrorHandler\Output\Html;
 use EnjoysCMS\ErrorHandler\Output\Image;
@@ -14,6 +14,7 @@ use EnjoysCMS\ErrorHandler\Output\Xml;
 use Exception;
 use HttpSoft\Message\ResponseFactory;
 use HttpSoft\Message\ServerRequestFactory;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\NullLogger;
@@ -69,20 +70,20 @@ class ErrorHandlerTest extends TestCase
         $emitter = $this->createMock(EmitterInterface::class);
         $emitter->expects($this->once())->method('emit');
 
-        $errorHandler = new ErrorHandler(
+        $errorHandler = new ExceptionHandler(
             request: (new ServerRequestFactory())->createServerRequest('get', '/'),
             emitter: $emitter,
             responseFactory: new ResponseFactory(),
             logger: new NullLogger()
         );
 
-        $error = new \InvalidArgumentException('This is the Error message');
+        $error = new InvalidArgumentException('This is the Error message');
         $errorHandler->handle($error);
     }
 
     public function testErrorOutput_HTML(): void
     {
-        $errorHandler = new ErrorHandler(
+        $errorHandler = new ExceptionHandler(
             request: (new ServerRequestFactory())->createServerRequest('get', '/'),
             emitter: $this->createMock(EmitterInterface::class),
             responseFactory: new ResponseFactory(),
@@ -91,7 +92,7 @@ class ErrorHandlerTest extends TestCase
 
         $method = $this->getPrivateMethod($errorHandler, 'getErrorOutput');
         $errorOutput = $method->invokeArgs($errorHandler, [
-            'error' => new \InvalidArgumentException('This is the Error message'),
+            'error' => new InvalidArgumentException('This is the Error message'),
             'httpStatusCode' => 500
         ]);
         $this->assertInstanceOf(Html::class, $errorOutput);
@@ -99,7 +100,7 @@ class ErrorHandlerTest extends TestCase
 
     public function testErrorOutput_JSON(): void
     {
-        $errorHandler = new ErrorHandler(
+        $errorHandler = new ExceptionHandler(
             request: (new ServerRequestFactory())->createServerRequest('get', '/')->withAddedHeader(
                 'Accept',
                 'application/json'
@@ -111,7 +112,7 @@ class ErrorHandlerTest extends TestCase
 
         $method = $this->getPrivateMethod($errorHandler, 'getErrorOutput');
         $errorOutput = $method->invokeArgs($errorHandler, [
-            'error' => new \InvalidArgumentException('This is the Error message'),
+            'error' => new InvalidArgumentException('This is the Error message'),
             'httpStatusCode' => 500
         ]);
         $this->assertInstanceOf(Json::class, $errorOutput);
@@ -119,7 +120,7 @@ class ErrorHandlerTest extends TestCase
 
     public function testErrorOutput_SVG(): void
     {
-        $errorHandler = new ErrorHandler(
+        $errorHandler = new ExceptionHandler(
             request: (new ServerRequestFactory())->createServerRequest('get', '/')->withAddedHeader(
                 'Accept',
                 'image/svg+xml'
@@ -131,7 +132,7 @@ class ErrorHandlerTest extends TestCase
 
         $method = $this->getPrivateMethod($errorHandler, 'getErrorOutput');
         $errorOutput = $method->invokeArgs($errorHandler, [
-            'error' => new \InvalidArgumentException('This is the Error message'),
+            'error' => new InvalidArgumentException('This is the Error message'),
             'httpStatusCode' => 500
         ]);
         $this->assertInstanceOf(Svg::class, $errorOutput);
@@ -139,7 +140,7 @@ class ErrorHandlerTest extends TestCase
 
     public function testErrorOutput_IMAGE(): void
     {
-        $errorHandler = new ErrorHandler(
+        $errorHandler = new ExceptionHandler(
             request: (new ServerRequestFactory())->createServerRequest('get', '/')->withAddedHeader(
                 'Accept',
                 'image/gif'
@@ -151,7 +152,7 @@ class ErrorHandlerTest extends TestCase
 
         $method = $this->getPrivateMethod($errorHandler, 'getErrorOutput');
         $errorOutput = $method->invokeArgs($errorHandler, [
-            'error' => new \InvalidArgumentException('This is the Error message'),
+            'error' => new InvalidArgumentException('This is the Error message'),
             'httpStatusCode' => 500
         ]);
         $this->assertInstanceOf(Image::class, $errorOutput);
@@ -159,7 +160,7 @@ class ErrorHandlerTest extends TestCase
 
     public function testErrorOutput_PLAINTEXT(): void
     {
-        $errorHandler = new ErrorHandler(
+        $errorHandler = new ExceptionHandler(
             request: (new ServerRequestFactory())->createServerRequest('get', '/')->withAddedHeader(
                 'Accept',
                 'text/plain'
@@ -171,7 +172,7 @@ class ErrorHandlerTest extends TestCase
 
         $method = $this->getPrivateMethod($errorHandler, 'getErrorOutput');
         $errorOutput = $method->invokeArgs($errorHandler, [
-            'error' => new \InvalidArgumentException('This is the Error message'),
+            'error' => new InvalidArgumentException('This is the Error message'),
             'httpStatusCode' => 404
         ]);
         $this->assertInstanceOf(Plain::class, $errorOutput);
@@ -179,7 +180,7 @@ class ErrorHandlerTest extends TestCase
 
     public function testErrorOutput_XML(): void
     {
-        $errorHandler = new ErrorHandler(
+        $errorHandler = new ExceptionHandler(
             request: (new ServerRequestFactory())->createServerRequest('get', '/')->withAddedHeader(
                 'Accept',
                 'text/xml'
@@ -191,7 +192,7 @@ class ErrorHandlerTest extends TestCase
 
         $method = $this->getPrivateMethod($errorHandler, 'getErrorOutput');
         $errorOutput = $method->invokeArgs($errorHandler, [
-            'error' => new \InvalidArgumentException('This is the Error message'),
+            'error' => new InvalidArgumentException('This is the Error message'),
             'httpStatusCode' => 500
         ]);
         $this->assertInstanceOf(Xml::class, $errorOutput);
@@ -200,10 +201,10 @@ class ErrorHandlerTest extends TestCase
     public function dataForTestGetStatusCode()
     {
         return [
-          [500, [], \InvalidArgumentException::class],
-          [400, [400=>[\InvalidArgumentException::class]], \InvalidArgumentException::class],
-          [500, [400=>[\Exception::class]], \InvalidArgumentException::class],
-          [404, [404=>[\Exception::class]], \Exception::class],
+          [500, [], InvalidArgumentException::class],
+          [400, [400=>[InvalidArgumentException::class]], InvalidArgumentException::class],
+          [500, [400=>[Exception::class]], InvalidArgumentException::class],
+          [404, [404=>[Exception::class]], Exception::class],
         ];
     }
 
@@ -213,7 +214,7 @@ class ErrorHandlerTest extends TestCase
      */
     public function testGetStatusCode($expect, $errorsMap, $exceptionClassString)
     {
-        $errorHandler = new ErrorHandler(
+        $errorHandler = new ExceptionHandler(
             request: (new ServerRequestFactory())->createServerRequest('get', '/'),
             emitter: $this->createMock(EmitterInterface::class),
             responseFactory: new ResponseFactory(),

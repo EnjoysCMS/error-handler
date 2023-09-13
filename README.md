@@ -1,16 +1,16 @@
 ### ErrorHandler
 
 ```php
-$errorHandler = new \EnjoysCMS\ErrorHandler\ErrorHandler(
+$exceptionHandler = new \EnjoysCMS\ErrorHandler\ExceptionHandler(
     request: $request, //required, Psr\Http\Message\ServerRequestInterface::class
     emitter: $emitter, //required, EnjoysCMS\Core\Interfaces\EmitterInterface::class
     responseFactory: $responseFactory, //required, Psr\Http\Message\ResponseFactoryInterface::class
-    logger: $logger,  // Psr\Log\LoggerInterface::class or null
+    logger: $logger,  // \EnjoysCMS\ErrorHandler\ErrorLoggerInterface::class or null
 );
 
 // Все ошибки будут выводиться с http статусом 500, с помощью setErrorsMap() можно переопределить статусы ошибок.
 // По-умолчанию в logger передаваться ничего не будет.
-$errorHandler->setErrorsMap([
+$exceptionHandler->setErrorsMap([
     404 => [
         NotFoundException::class,
         NoResultException::class,
@@ -30,7 +30,7 @@ $errorHandler->setErrorsMap([
 );
 
 // Для передачи ошибки в logger, необходимо сопоставить ошибки с уровнем лога при помощи setLoggerTypeMap()
-$errorHandler->setLoggerTypeMap([
+$exceptionHandler->setLoggerTypeMap([
     // для конкретно этой ошибки, будет вызван $logger->info()
     NoResultException::class => ['info'], 
     // для конкретно этой ошибки, будет вызван $logger->debug() и $logger->warning()
@@ -46,14 +46,15 @@ $errorHandler->setLoggerTypeMap([
 try {
     // ... something code
 } catch(\Throwable $error) {
-    $errorHandler->handle($error);
+    $exceptionHandler->handle($error);
 }
 
 ```
 
 ### ErrorHandlerMiddleware
+
 ```php
-$errorHandler = new \EnjoysCMS\ErrorHandler\ErrorHandler();
+$exceptionHandler = new \EnjoysCMS\ErrorHandler\ExceptionHandler();
 // ... more setting error handler
-$errorHandlerMiddleware = new \EnjoysCMS\ErrorHandler\ErrorHandlerMiddleware($errorHandler);
+$errorHandlerMiddleware = new \EnjoysCMS\ErrorHandler\ErrorHandlerMiddleware($exceptionHandler);
 ```

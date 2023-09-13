@@ -13,7 +13,7 @@ use Throwable;
 final class ErrorHandlerMiddleware  implements MiddlewareInterface
 {
 
-    public function __construct(private readonly ErrorHandlerInterface $errorHandler)
+    public function __construct(private readonly ExceptionHandlerInterface $exceptionHandler)
     {
     }
 
@@ -22,7 +22,7 @@ final class ErrorHandlerMiddleware  implements MiddlewareInterface
         try {
             return $handler->handle($request);
         } catch (Throwable $error) {
-            $this->errorHandler->handle($error);
+            $this->exceptionHandler->handle($error);
             exit;
         }
     }

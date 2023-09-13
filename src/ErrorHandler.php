@@ -4,32 +4,14 @@ declare(strict_types=1);
 
 namespace EnjoysCMS\ErrorHandler;
 
-use EnjoysCMS\Core\Http\Emitter\EmitterInterface;
-use EnjoysCMS\ErrorHandler\Output\ErrorOutputInterface;
-use EnjoysCMS\ErrorHandler\Output\Html;
-use EnjoysCMS\ErrorHandler\Output\Image;
-use EnjoysCMS\ErrorHandler\Output\Json;
-use EnjoysCMS\ErrorHandler\Output\Plain;
-use EnjoysCMS\ErrorHandler\Output\Svg;
-use EnjoysCMS\ErrorHandler\Output\Xml;
 use ErrorException;
-use Psr\Http\Message\ResponseFactoryInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Log\LoggerInterface;
 use Throwable;
 
-final class ErrorHandler implements ErrorHandlerInterface
+final class ErrorHandler
 {
-    private const  PROCESSORS_MAP = [
-        Json::class => ['application/json', 'text/json'],
-        Html::class => ['text/html'],
-        Xml::class => ['text/xml'],
-        Plain::class => ['text/plain', 'text/css', 'text/javascript'],
-        Svg::class => ['image/svg+xml'],
-        Image::class => ['image/gif', 'image/jpeg', 'image/png', 'image/webp']
-    ];
 
-    private const ERROR_NAMES = [
+    public const ERROR_NAMES = [
+        0 => 'Exception',
         E_ERROR => 'PHP Fatal Error',
         E_WARNING => 'PHP Warning',
         E_PARSE => 'PHP Parse Error',
@@ -43,127 +25,16 @@ final class ErrorHandler implements ErrorHandlerInterface
         E_USER_NOTICE => 'PHP User Notice',
         E_STRICT => 'PHP Strict Warning',
         E_RECOVERABLE_ERROR => 'PHP Recoverable Error',
-        E_DEPRECATED => 'PHP Deprecated Warning',
-        E_USER_DEPRECATED => 'PHP User Deprecated Warning',
+        E_DEPRECATED => 'PHP Deprecated',
+        E_USER_DEPRECATED => 'PHP User Deprecated',
     ];
-
-    public const DEFAULT_STATUS_CODE = 500;
-
-    /**
-     * @var array<int, list<string>>
-     */
-    private array $errorsMap = [];
-
-    /**
-     * @var array<array-key, list<string>>
-     */
-    private array $loggerTypeMap = [
-        500 => ['error']
-    ];
-
-    /**
-     * @deprecated
-     */
-    private bool $allowQuit = false;
 
     public function __construct(
-        private readonly ServerRequestInterface $request,
-        private readonly EmitterInterface $emitter,
-        private readonly ResponseFactoryInterface $responseFactory,
-        private readonly DeprecationsHandlerInterface $deprecationsHandler,
-        private readonly LoggerInterface $logger
+        private readonly ExceptionHandlerInterface $throwableHandler,
+        private readonly ErrorLoggerInterface $logger
     ) {
     }
 
-    /**
-     * @throws Throwable
-     */
-    public function handle(Throwable $error): void
-    {
-        // disable error capturing to avoid recursive errors while handling exceptions
-        $this->unregister();
-
-        try {
-            $httpStatusCode = $this->getStatusCode($error);
-            $this->sendToLogger($error, $this->loggerTypeMap[$httpStatusCode] ?? []);
-
-            $response = $this->getErrorOutput($error, $httpStatusCode)
-                ->getResponse();
-
-            $this->emitter->emit($response);
-        } catch (Throwable $e) {
-            Html::setHtmlTemplater(); // clear templater to defaults setting
-            throw $e;
-        } finally {
-            if ($this->allowQuit) {
-                exit;
-            }
-        }
-    }
-
-    private function getErrorOutput(Throwable $error, int $httpStatusCode): ErrorOutputInterface
-    {
-        /** @var class-string<ErrorOutputInterface> $processor */
-        foreach (self::PROCESSORS_MAP as $processor => $mimes) {
-            foreach ($mimes as $mime) {
-                if (stripos($this->request->getHeaderLine('Accept'), $mime) !== false) {
-                    return new $processor(new Error($error, $httpStatusCode, $mime), $this->responseFactory);
-                }
-            }
-        }
-        return new Html(new Error($error, $httpStatusCode, 'text/html'), $this->responseFactory);
-    }
-
-    private function getStatusCode(Throwable $error): int
-    {
-        foreach ($this->errorsMap as $statusCode => $stack) {
-            if (in_array($error::class, $stack)) {
-                return $statusCode;
-            }
-        }
-        return self::DEFAULT_STATUS_CODE;
-    }
-
-    /**
-     * @param list<string> $loggerTypes
-     */
-    private function sendToLogger(Throwable $error, array $loggerTypes = []): void
-    {
-        $typeError = get_class($error);
-
-        if (array_key_exists($typeError, $this->loggerTypeMap)) {
-            $loggerTypes = $this->loggerTypeMap[$typeError];
-        }
-
-        foreach ($loggerTypes as $loggerType) {
-            if (method_exists($this->logger, $loggerType)) {
-
-                $this->logger->$loggerType(sprintf("%s %s\n%s", $typeError, $error->getCode(), $error->getMessage()), [
-                    'code' => $error->getCode(),
-                    'line' => $error->getLine(),
-                    'file' => $error->getFile(),
-                ]);
-            }
-        }
-    }
-
-    /**
-     * @param array<int, list<string>> $errorsMap
-     */
-    public function setErrorsMap(array $errorsMap): ErrorHandler
-    {
-        $this->errorsMap = $errorsMap;
-        return $this;
-    }
-
-    /**
-     * @param array<array-key, list<string>> $loggerTypeMap
-     */
-    public function setLoggerTypeMap(array $loggerTypeMap): ErrorHandler
-    {
-        $this->loggerTypeMap = $loggerTypeMap;
-        return $this;
-    }
 
     /**
      * Catch Errors, Warning, etc
@@ -183,14 +54,6 @@ final class ErrorHandler implements ErrorHandlerInterface
         return $this;
     }
 
-    /**
-     * @deprecated
-     */
-    public function allowQuit(bool $value = true): ErrorHandler
-    {
-        $this->allowQuit = $value;
-        return $this;
-    }
 
     /**
      * Register this error handler.
@@ -200,12 +63,16 @@ final class ErrorHandler implements ErrorHandlerInterface
     {
         // Handles throwable, echo output and exit.
         set_exception_handler(function (Throwable $error): void {
-            $this->handle($error);
+            // disable error capturing to avoid recursive errors while handling exceptions
+            $this->unregister();
+            $this->throwableHandler->handle($error);
         });
 
         // Handles PHP execution errors such as warnings and notices.
         set_error_handler(
             function (int $severity, string $message, string $file, int $line): bool {
+                // Logging all php errors
+                $this->logger->log(new PhpError($severity, $message, $file, $line));
 
                 if (!(error_reporting() & $severity)) {
                     // This error code is not included in error_reporting.
@@ -221,13 +88,9 @@ final class ErrorHandler implements ErrorHandlerInterface
                         $line
                     );
                 }
-
                 return true;
             }
         );
-
-        // Handles deprecations
-        $this->deprecationsHandler->register();
 
         // Handles fatal error.
         register_shutdown_function(function (): void {
