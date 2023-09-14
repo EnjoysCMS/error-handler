@@ -30,7 +30,7 @@ final class ErrorHandler
     ];
 
     public function __construct(
-        private readonly ExceptionHandlerInterface $throwableHandler,
+        private readonly ExceptionHandlerInterface $exceptionHandler,
         private readonly ErrorLoggerInterface $logger
     ) {
     }
@@ -65,7 +65,7 @@ final class ErrorHandler
         set_exception_handler(function (Throwable $error): void {
             // disable error capturing to avoid recursive errors while handling exceptions
             $this->unregister();
-            $this->throwableHandler->handle($error);
+            $this->exceptionHandler->handle($error);
         });
 
         // Handles PHP execution errors such as warnings and notices.
@@ -128,6 +128,8 @@ final class ErrorHandler
             E_COMPILE_ERROR,
             E_COMPILE_WARNING,
             E_USER_ERROR,
+//            E_USER_DEPRECATED,
+//            E_DEPRECATED
         ], true);
     }
 
