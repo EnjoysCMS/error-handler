@@ -4,19 +4,21 @@ declare(strict_types=1);
 
 namespace EnjoysCMS\ErrorHandler\View;
 
-use EnjoysCMS\ErrorHandler\ExceptionHandler;
+use EnjoysCMS\ErrorHandler\Error;
 use EnjoysCMS\ErrorHandler\ExceptionHandlerInterface;
 use HttpSoft\Message\Response;
 use ReflectionClass;
-use Throwable;
 
 final class SimpleHtmlViewVeryVerbose implements ViewInterface
 {
-    public function getContent(Throwable $error, int $statusCode = ExceptionHandlerInterface::DEFAULT_STATUS_CODE): string
+    public function getContent(Error $error, int $statusCode = ExceptionHandlerInterface::DEFAULT_STATUS_CODE): string
     {
         /** @var string $phrase */
         $phrase = $this->getPhrase($statusCode);
-        $message = htmlspecialchars($error->__toString());
+
+        $message = htmlspecialchars(
+            sprintf('%s: %s in %s:%s', $error->type, $error->message, $error->file, $error->line)
+        );
 
         return <<<HTML
 <!DOCTYPE html>
@@ -44,9 +46,9 @@ final class SimpleHtmlViewVeryVerbose implements ViewInterface
 <p>
     <code><b>$statusCode</b><br>$phrase
     </code>
-    <pre style="display: block; margin-top: 2em; color: grey">
+    <div style="font-family: monospace; display: block; margin-top: 2em; color: grey">
     $message
-    </pre>
+    </div>
 </p>
 <p>
 HTML;

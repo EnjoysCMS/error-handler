@@ -46,11 +46,12 @@ final class ExceptionHandler implements ExceptionHandlerInterface
         500 => ['error']
     ];
 
+    private ?ErrorLoggerInterface $logger = null;
+
     public function __construct(
         private readonly ServerRequestInterface $request,
         private readonly EmitterInterface $emitter,
         private readonly ResponseFactoryInterface $responseFactory,
-        private readonly ErrorLoggerInterface $logger
     ) {
     }
 
@@ -62,7 +63,7 @@ final class ExceptionHandler implements ExceptionHandlerInterface
         try {
             $httpStatusCode = $this->getStatusCode($error);
 
-            $this->logger->log(
+            $this->logger?->log(
                 PhpError::fromThrowable($error),
                 $this->getLogLevels($error, $httpStatusCode)
             );
@@ -119,11 +120,11 @@ final class ExceptionHandler implements ExceptionHandlerInterface
         foreach (self::PROCESSORS_MAP as $processor => $mimes) {
             foreach ($mimes as $mime) {
                 if (stripos($this->request->getHeaderLine('Accept'), $mime) !== false) {
-                    return new $processor(new Error($error, $httpStatusCode, $mime), $this->responseFactory);
+                    return new $processor(Error::createFromThrowable($error, $httpStatusCode, $mime), $this->responseFactory);
                 }
             }
         }
-        return new Html(new Error($error, $httpStatusCode, 'text/html'), $this->responseFactory);
+        return new Html(Error::createFromThrowable($error, $httpStatusCode, 'text/html'), $this->responseFactory);
     }
 
     /**
@@ -147,5 +148,11 @@ final class ExceptionHandler implements ExceptionHandlerInterface
         }
 
         return $this->loggerTypeMap[$httpStatusCode] ?? false;
+    }
+
+    public function setErrorLogger(?ErrorLoggerInterface $logger): ExceptionHandlerInterface
+    {
+        $this->logger = $logger;
+        return $this;
     }
 }

@@ -6,40 +6,31 @@ use Throwable;
 
 final class Error
 {
-    public function __construct(
-        private readonly Throwable $error,
-        private readonly int $httpStatusCode,
-        private readonly ?string $mimeType = null
+    private function __construct(
+        public readonly string $message,
+        public readonly string $file,
+        public readonly int $line,
+        public readonly string $type,
+        public readonly int $code,
+        public readonly int $httpStatusCode,
+        public readonly string $traceString = '',
+        public readonly array $trace = [],
+        public readonly ?string $mimeType = null
     ) {
     }
 
-    public function getError(): Throwable
+    public static function createFromThrowable(Throwable $error, int $httpStatusCode, ?string $mimeType = null): Error
     {
-        return $this->error;
-    }
-
-    public function getHttpStatusCode(): int
-    {
-        return $this->httpStatusCode;
-    }
-
-    public function getMimeType(): ?string
-    {
-        return $this->mimeType;
-    }
-
-    public function getType(): string
-    {
-        return $this->error::class;
-    }
-
-    public function getMessage(): string
-    {
-        return $this->error->getMessage();
-    }
-
-    public function getCode(): int
-    {
-        return $this->error->getCode();
+        return new self(
+            message: $error->getMessage(),
+            file: $error->getFile(),
+            line: $error->getLine(),
+            type: $error::class,
+            code: $error->getCode(),
+            httpStatusCode: $httpStatusCode,
+            traceString: $error->getTraceAsString(),
+            trace: $error->getTrace(),
+            mimeType: $mimeType
+        );
     }
 }

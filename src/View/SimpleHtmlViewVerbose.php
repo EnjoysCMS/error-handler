@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EnjoysCMS\ErrorHandler\View;
 
+use EnjoysCMS\ErrorHandler\Error;
 use EnjoysCMS\ErrorHandler\ExceptionHandler;
 use EnjoysCMS\ErrorHandler\ExceptionHandlerInterface;
 use HttpSoft\Message\Response;
@@ -12,19 +13,19 @@ use Throwable;
 
 final class SimpleHtmlViewVerbose implements ViewInterface
 {
-    public function getContent(Throwable $error, int $statusCode = ExceptionHandlerInterface::DEFAULT_STATUS_CODE): string
+    public function getContent(Error $error, int $statusCode = ExceptionHandlerInterface::DEFAULT_STATUS_CODE): string
     {
+
         /** @var string $phrase */
         $phrase = $this->getPhrase($statusCode);
-        $type = get_class($error);
 
         $message = implode(
             ': ',
             array_filter(
                 [
-                    $type,
-                    empty($error->getCode()) ? null : $error->getCode(),
-                    empty($error->getMessage()) ? null : htmlspecialchars($error->getMessage()),
+                    $error->type,
+                    empty($error->code) ? null : $error->code,
+                    empty($error->message) ? null : htmlspecialchars($error->message),
                 ],
                 function ($item) {
                     return !is_null($item);

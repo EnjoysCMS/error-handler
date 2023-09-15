@@ -29,83 +29,48 @@ final class ErrorHandler
         E_USER_DEPRECATED => 'PHP User Deprecated',
     ];
 
+    public static array $fatalErrorMap = [
+        E_ERROR,
+        E_PARSE,
+        E_CORE_ERROR,
+        E_CORE_WARNING,
+        E_COMPILE_ERROR,
+        E_COMPILE_WARNING,
+        E_USER_ERROR
+    ];
+
     public function __construct(
         private readonly ExceptionHandlerInterface $exceptionHandler,
         private readonly ErrorLoggerInterface $logger
     ) {
+        $this->exceptionHandler->setErrorLogger($logger);
     }
 
 
     /**
      * Catch Errors, Warning, etc
-     * @throws ErrorException
-     * @throws Throwable
      */
     public function catchErrors(): ErrorHandler
     {
-        $this->displayErrors(false);
+        self::displayErrors(false);
         $this->register();
-        return $this;
-    }
-
-    public function displayErrors(bool $value): ErrorHandler
-    {
-        ini_set('display_errors', $value ? '1' : '0');
         return $this;
     }
 
 
     /**
      * Register this error handler.
-     * @throws Throwable
      */
     public function register(): void
     {
         // Handles throwable, echo output and exit.
-        set_exception_handler(function (Throwable $error): void {
-            // disable error capturing to avoid recursive errors while handling exceptions
-            $this->unregister();
-            $this->exceptionHandler->handle($error);
-        });
+        set_exception_handler([$this, 'exceptionHandler']);
 
         // Handles PHP execution errors such as warnings and notices.
-        set_error_handler(
-            function (int $severity, string $message, string $file, int $line): bool {
-                // Logging all php errors
-                $this->logger->log(new PhpError($severity, $message, $file, $line));
-
-                if (!(error_reporting() & $severity)) {
-                    // This error code is not included in error_reporting.
-                    return true;
-                }
-
-                if (self::isFatalError($severity)) {
-                    throw new ErrorException(
-                        sprintf('%s: %s', self::ERROR_NAMES[$severity] ?? '', $message),
-                        0,
-                        $severity,
-                        $file,
-                        $line
-                    );
-                }
-                return true;
-            }
-        );
+        set_error_handler([$this, 'errorHandler']);
 
         // Handles fatal error.
-        register_shutdown_function(function (): void {
-            $e = error_get_last();
-
-            if ($e !== null && self::isFatalError($e['type'])) {
-                throw new ErrorException(
-                    sprintf('%s: %s', self::ERROR_NAMES[$e['type']] ?? '', $e['message']),
-                    0,
-                    $e['type'],
-                    $e['file'],
-                    $e['line']
-                );
-            }
-        });
+        register_shutdown_function([$this, 'shutdownFunction']);
     }
 
     /**
@@ -117,21 +82,82 @@ final class ErrorHandler
         restore_exception_handler();
     }
 
+    /**
+     * @param Throwable $error
+     * @return void
+     * @internal
+     */
+    public function exceptionHandler(Throwable $error): void
+    {
+        // disable error capturing to avoid recursive errors while handling exceptions
+        $this->unregister();
+        $this->exceptionHandler->handle($error);
+    }
+
+    /**
+     * @param int $severity
+     * @param string $message
+     * @param string $file
+     * @param int $line
+     * @return bool
+     * @throws ErrorException
+     * @internal
+     */
+    public function errorHandler(int $severity, string $message, string $file, int $line): bool
+    {
+        // Logging all php errors
+        $this->logger->log(new PhpError($severity, $message, $file, $line));
+
+        if (!(error_reporting() & $severity)) {
+            // This error code is not included in error_reporting.
+            return true;
+        }
+
+        if (self::isFatalError($severity)) {
+            throw new ErrorException(
+                sprintf('%s: %s', self::ERROR_NAMES[$severity] ?? '', $message),
+                0,
+                $severity,
+                $file,
+                $line
+            );
+        }
+        return true;
+    }
+
+    /**
+     * @return void
+     * @throws ErrorException
+     * @internal
+     */
+    public function shutdownFunction(): void
+    {
+        $e = error_get_last();
+
+        if ($e !== null && self::isFatalError($e['type'])) {
+            throw new ErrorException(
+                sprintf('%s: %s', self::ERROR_NAMES[$e['type']] ?? '', $e['message']),
+                0,
+                $e['type'],
+                $e['file'],
+                $e['line']
+            );
+        }
+    }
 
     public static function isFatalError(int $severity): bool
     {
-        return in_array($severity, [
-            E_ERROR,
-            E_PARSE,
-            E_CORE_ERROR,
-            E_CORE_WARNING,
-            E_COMPILE_ERROR,
-            E_COMPILE_WARNING,
-            E_USER_ERROR,
-//            E_USER_DEPRECATED,
-//            E_DEPRECATED
-        ], true);
+        return in_array($severity, self::$fatalErrorMap, true);
     }
 
+    public static function displayErrors(bool $value): void
+    {
+        ini_set('display_errors', $value ? '1' : '0');
+    }
+
+    public function getErrorLogger(): ErrorLoggerInterface
+    {
+        return $this->logger;
+    }
 
 }

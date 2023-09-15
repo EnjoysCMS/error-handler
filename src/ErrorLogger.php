@@ -163,5 +163,10 @@ final class ErrorLogger implements ErrorLoggerInterface
         return $this;
     }
 
+    public function getPsrLogger(): LoggerInterface
+    {
+        return $this->logger;
+    }
+
 
 }

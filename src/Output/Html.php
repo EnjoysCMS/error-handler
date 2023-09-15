@@ -6,6 +6,8 @@ namespace EnjoysCMS\ErrorHandler\Output;
 
 use EnjoysCMS\ErrorHandler\Error;
 use EnjoysCMS\ErrorHandler\View\SimpleHtmlView;
+use EnjoysCMS\ErrorHandler\View\SimpleHtmlViewVerbose;
+use EnjoysCMS\ErrorHandler\View\SimpleHtmlViewVeryVerbose;
 use EnjoysCMS\ErrorHandler\View\ViewInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -20,7 +22,7 @@ final class Html implements ErrorOutputInterface
         private readonly Error $error,
         ResponseFactoryInterface $responseFactory
     ) {
-        $this->response = $responseFactory->createResponse($this->error->getHttpStatusCode());
+        $this->response = $responseFactory->createResponse($this->error->httpStatusCode);
     }
 
     public function getResponse(): ResponseInterface
@@ -30,7 +32,7 @@ final class Html implements ErrorOutputInterface
         }
 
         $this->response->getBody()->write(
-            self::$templater->getContent($this->error->getError(), $this->error->getHttpStatusCode())
+            self::$templater->getContent($this->error, $this->error->httpStatusCode)
         );
         return $this->response;
     }
