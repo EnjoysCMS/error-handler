@@ -106,7 +106,7 @@ final class ExceptionHandler implements ExceptionHandlerInterface
     private function getStatusCode(Throwable $error): int
     {
         foreach ($this->errorsMap as $statusCode => $stack) {
-            if (in_array($error::class, $stack)) {
+            if (in_array($error::class, $stack) || in_array('\\' . $error::class, $stack)) {
                 return $statusCode;
             }
         }
@@ -120,7 +120,10 @@ final class ExceptionHandler implements ExceptionHandlerInterface
         foreach (self::PROCESSORS_MAP as $processor => $mimes) {
             foreach ($mimes as $mime) {
                 if (stripos($this->request->getHeaderLine('Accept'), $mime) !== false) {
-                    return new $processor(Error::createFromThrowable($error, $httpStatusCode, $mime), $this->responseFactory);
+                    return new $processor(
+                        Error::createFromThrowable($error, $httpStatusCode, $mime),
+                        $this->responseFactory
+                    );
                 }
             }
         }
@@ -140,7 +143,6 @@ final class ExceptionHandler implements ExceptionHandlerInterface
     private function getLogLevels(Throwable $error, int $httpStatusCode): array|false
     {
         $typeError = get_class($error);
-
 
 
         if (array_key_exists($typeError, $this->loggerTypeMap)) {
